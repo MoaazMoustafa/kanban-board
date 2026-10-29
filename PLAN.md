@@ -122,11 +122,15 @@ complex Ui/
 
 ### Phase 1: Domain model (pure TS, test-first)
 
-- [ ] 1.1 `types.ts`: `Id`, `Card`, `Column`, `BoardState`
-- [ ] 1.2 `actions.ts`: `addCard`, `updateCard`, `deleteCard`, `moveCard`, `addColumn`, `renameColumn`, `deleteColumn`, `moveColumn`
-- [ ] 1.3 `reducer.ts`, with exhaustive `switch` checking (`assertNever`)
-- [ ] 1.4 `reducer.test.ts`: cover every action, edge cases (same-column move, out-of-range index, deleting a column cascades to its cards) and immutability
-- [ ] 1.5 `selectors.ts`, plus `test/factories.ts` for seed data
+- [x] 1.1 `types.ts`: branded `CardId` / `ColumnId`, `Card`, `Column`, `BoardState`
+- [x] 1.2 `actions.ts`: `addCard`, `updateCard`, `deleteCard`, `moveCard`, `addColumn`, `renameColumn`, `deleteColumn`, `moveColumn`
+- [x] 1.3 `reducer.ts`, with exhaustive `switch` checking (`assertNever`)
+- [x] 1.4 `reducer.test.ts`: cover every action, edge cases (same-column move, out-of-range index, deleting a column cascades to its cards) and immutability
+- [x] 1.5 `selectors.ts`, `seed.ts` (demo board), and `test/factories.ts` (`makeBoard`, `layoutOf`, `deepFreeze`)
+
+**Decisions made:** IDs and timestamps are generated in action creators, never in the reducer. Invalid or no-op actions return the same state object instead of throwing. Cards do not store their `columnId`.
+
+**Done when:** every action is covered, tests run against frozen state, `npm run check` passes. ✅
 
 **Learn:** normalization, discriminated unions, immutable updates, exhaustiveness checks.
 
