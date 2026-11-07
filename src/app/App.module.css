@@ -1,0 +1,27 @@
+.app {
+  display: grid;
+  grid-template-rows: var(--header-height) minmax(0, 1fr);
+  height: 100%;
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  padding: 0 var(--space-5);
+}
+
+.title {
+  font-size: var(--font-size-lg);
+  font-weight: var(--font-weight-bold);
+  letter-spacing: -0.01em;
+}
+
+.main {
+  min-height: 0;
+}
+
+@media (width < 40rem) {
+  .header {
+    padding-inline: var(--space-4);
+  }
+}

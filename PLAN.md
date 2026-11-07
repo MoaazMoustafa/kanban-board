@@ -136,12 +136,16 @@ complex Ui/
 
 ### Phase 2: Static UI and styling
 
-- [ ] 2.1 Design tokens (light/dark), reset, global styles
-- [ ] 2.2 `Board` → `Column` → `Card` rendered from seed state with Context + `useReducer`
-- [ ] 2.3 Horizontal scrolling board, vertically scrolling columns, sticky column headers
-- [ ] 2.4 Add/edit/delete for cards and columns (inline edit, `AddCardForm`)
-- [ ] 2.5 `CardDetailsDialog` built on native `<dialog>`, with focus trapping and returning focus on close
-- [ ] 2.6 Component tests with RTL (queries by role and name only)
+- [x] 2.1 Design tokens (light/dark), reset, global styles
+- [x] 2.2 `Board` → `Column` → `Card` rendered from seed state with Context + `useReducer`
+- [x] 2.3 Horizontal scrolling board, vertically scrolling columns, sticky column headers
+- [x] 2.4 Add/edit/delete for cards and columns (inline edit, `AddCardForm`)
+- [x] 2.5 `CardDetailsDialog` built on native `<dialog>`, with focus trapping and returning focus on close
+- [x] 2.6 Component tests with RTL (queries by role and name only)
+
+**Decisions made:** state and dispatch live in separate contexts, and components read state through `useBoardSelector`, so Phase 7 can swap in a store without changing them. The dialog uses native `showModal()`: the page behind becomes inert, and Tab may go to the browser's own UI, which is expected. Card hints use `aria-describedby`, not hidden text in the name. jsdom lacks `<dialog>` and `scrollTo`, so `src/test/setup.ts` stubs them and Playwright covers the real behaviour.
+
+**Done when:** `npm run check` and `npm run test:e2e` pass. Checked visually in light, dark, and at phone width. ✅
 
 **Learn:** semantic HTML, CSS Modules, design tokens, accessible dialogs.
 

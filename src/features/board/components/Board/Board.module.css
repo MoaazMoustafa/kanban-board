@@ -1,0 +1,50 @@
+.board {
+  height: 100%;
+  overflow: auto hidden;
+  padding: var(--space-2) var(--space-5) var(--space-5);
+  scrollbar-gutter: stable;
+}
+
+.columns {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-3);
+  height: 100%;
+}
+
+.columnSlot {
+  flex: 0 0 var(--column-width);
+  display: flex;
+  max-height: 100%;
+}
+
+/* Each column gets an accent hue from a fixed cycle, used by the header dot. */
+.columnSlot:nth-child(5n + 1) {
+  --column-accent: #6366f1;
+}
+.columnSlot:nth-child(5n + 2) {
+  --column-accent: #f59e0b;
+}
+.columnSlot:nth-child(5n + 3) {
+  --column-accent: #0ea5e9;
+}
+.columnSlot:nth-child(5n + 4) {
+  --column-accent: #10b981;
+}
+.columnSlot:nth-child(5n + 5) {
+  --column-accent: #ec4899;
+}
+
+/* Phones: one column per screen, snapping as you swipe. */
+@media (width < 40rem) {
+  .board {
+    padding-inline: var(--space-4);
+    scroll-snap-type: x mandatory;
+    scroll-padding-inline: var(--space-4);
+  }
+
+  .columnSlot {
+    flex-basis: calc(100vw - 3 * var(--space-4));
+    scroll-snap-align: start;
+  }
+}

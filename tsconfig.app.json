@@ -23,7 +23,6 @@
     "strict": true,
     "noUncheckedIndexedAccess": true,
     "noImplicitOverride": true,
-    "noPropertyAccessFromIndexSignature": true,
 
     /* Linting */
     "noUnusedLocals": true,
