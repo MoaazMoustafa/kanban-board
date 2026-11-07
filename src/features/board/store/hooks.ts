@@ -1,5 +1,5 @@
 import { use, useMemo, type Context } from 'react'
-import { boardActions } from '../model/actions'
+import { boardActions, type BoardAction } from '../model/actions'
 import type { BoardState } from '../model/types'
 import { BoardDispatchContext, BoardStateContext } from './context'
 
@@ -16,6 +16,11 @@ function useRequiredContext<T>(context: Context<T | null>, name: string): T {
  */
 export function useBoardSelector<T>(selector: (state: BoardState) => T): T {
   return selector(useRequiredContext(BoardStateContext, 'useBoardSelector'))
+}
+
+/** Raw dispatch, for code that already has an action object. */
+export function useBoardDispatch(): (action: BoardAction) => void {
+  return useRequiredContext(BoardDispatchContext, 'useBoardDispatch')
 }
 
 type BoundActions = {

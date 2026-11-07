@@ -70,3 +70,11 @@ test('renaming a column with Enter does not reopen the editor', async ({ page })
   await expect(page.getByRole('textbox', { name: 'Column title' })).toBeHidden()
   await expect(page.getByRole('button', { name: 'QA', exact: true })).toBeFocused()
 })
+
+test('the board scrolls, not the page', async ({ page }) => {
+  await page.setViewportSize({ width: 700, height: 600 })
+  const overflow = await page.evaluate(
+    () => document.documentElement.scrollWidth - document.documentElement.clientWidth,
+  )
+  expect(overflow).toBe(0)
+})

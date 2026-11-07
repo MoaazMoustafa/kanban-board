@@ -1,4 +1,5 @@
 import { useId } from 'react'
+import type { SortableItem } from '@/features/dnd'
 import { TextIcon } from '@/shared/ui/icons'
 import { selectCard } from '../../model/selectors'
 import type { CardId } from '../../model/types'
@@ -8,9 +9,10 @@ import styles from './Card.module.css'
 interface CardProps {
   cardId: CardId
   onOpen: (id: CardId) => void
+  dragHandleProps?: SortableItem['handleProps']
 }
 
-export function Card({ cardId, onOpen }: CardProps) {
+export function Card({ cardId, onOpen, dragHandleProps }: CardProps) {
   const card = useBoardSelector((state) => selectCard(state, cardId))
   const hintId = useId()
   if (!card) return null
@@ -24,6 +26,7 @@ export function Card({ cardId, onOpen }: CardProps) {
       // The name stays the title; extra facts go in the description, where they belong.
       aria-describedby={hasDescription ? hintId : undefined}
       onClick={() => onOpen(card.id)}
+      {...dragHandleProps}
     >
       <span className={styles.title}>{card.title}</span>
       {hasDescription && (

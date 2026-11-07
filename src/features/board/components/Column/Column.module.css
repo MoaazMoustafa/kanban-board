@@ -1,3 +1,41 @@
+/* The sortable slot around a column (an item in the board's column list). */
+.slot {
+  flex: 0 0 var(--column-width);
+  display: flex;
+  max-height: 100%;
+}
+
+/* Placeholder: where the dragged column will land. */
+.slot[data-dnd-active] {
+  border-radius: var(--radius-lg);
+  outline: 2px dashed var(--color-border);
+  outline-offset: -2px;
+  background: color-mix(in srgb, var(--color-text) 4%, transparent);
+}
+
+.slot[data-dnd-active] > * {
+  visibility: hidden;
+}
+
+/* The floating copy while dragging. */
+:global([data-dnd-overlay]) .column {
+  height: 100%;
+  box-shadow: var(--shadow-dialog);
+  rotate: 1.5deg;
+  transition: rotate var(--duration-normal) var(--ease-out);
+}
+
+:global([data-dnd-overlay='settling']) .column {
+  rotate: 0deg;
+}
+
+@media (width < 40rem) {
+  .slot {
+    flex-basis: calc(100vw - 3 * var(--space-4));
+    scroll-snap-align: start;
+  }
+}
+
 .column {
   display: flex;
   flex-direction: column;
@@ -8,6 +46,7 @@
 }
 
 .header {
+  cursor: grab;
   display: flex;
   align-items: center;
   gap: var(--space-2);
@@ -58,6 +97,8 @@
 }
 
 .cards {
+  /* The sortable container must be its items' offsetParent for measuring. */
+  position: relative;
   display: flex;
   flex-direction: column;
   gap: var(--space-2);

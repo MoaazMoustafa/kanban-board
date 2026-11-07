@@ -1,0 +1,20 @@
+/* Global, engine-level styles. Item-specific looks belong to the components. */
+[data-dnd-overlay] {
+  position: fixed;
+  top: 0;
+  left: 0;
+  z-index: 1000;
+  pointer-events: none;
+  will-change: transform;
+}
+
+:root[data-dnd-dragging],
+:root[data-dnd-dragging] * {
+  cursor: grabbing !important;
+  user-select: none !important;
+}
+
+/* The clone is often an <li> taken out of its list: no stray list marker. */
+[data-dnd-overlay] > * {
+  list-style: none;
+}

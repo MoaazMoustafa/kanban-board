@@ -6,33 +6,16 @@
 }
 
 .columns {
+  /* The sortable container must be its items' offsetParent for measuring. */
+  position: relative;
   display: flex;
   align-items: flex-start;
   gap: var(--space-3);
   height: 100%;
 }
 
-.columnSlot {
+.addColumnSlot {
   flex: 0 0 var(--column-width);
-  display: flex;
-  max-height: 100%;
-}
-
-/* Each column gets an accent hue from a fixed cycle, used by the header dot. */
-.columnSlot:nth-child(5n + 1) {
-  --column-accent: #6366f1;
-}
-.columnSlot:nth-child(5n + 2) {
-  --column-accent: #f59e0b;
-}
-.columnSlot:nth-child(5n + 3) {
-  --column-accent: #0ea5e9;
-}
-.columnSlot:nth-child(5n + 4) {
-  --column-accent: #10b981;
-}
-.columnSlot:nth-child(5n + 5) {
-  --column-accent: #ec4899;
 }
 
 /* Phones: one column per screen, snapping as you swipe. */
@@ -43,7 +26,7 @@
     scroll-padding-inline: var(--space-4);
   }
 
-  .columnSlot {
+  .addColumnSlot {
     flex-basis: calc(100vw - 3 * var(--space-4));
     scroll-snap-align: start;
   }

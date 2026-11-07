@@ -151,16 +151,26 @@ complex Ui/
 
 ### Phase 3: Drag-and-drop engine (pointer)
 
-- [ ] 3.1 `dnd/core/types.ts` and `collision.ts` (closest center / pointer-within), unit-tested
-- [ ] 3.2 `DndProvider`: drag lifecycle state machine (`idle → pending → dragging → dropping`)
-- [ ] 3.3 `useDraggable`: pointer down, an activation threshold (about 5px, so clicks still work), `setPointerCapture`
-- [ ] 3.4 `useDroppable`: register containers and measure rects at drag start
-- [ ] 3.5 `DragOverlay` in a portal, moved with `transform` inside `requestAnimationFrame`
-- [ ] 3.6 Placeholder / drop indicator, and siblings shifting out of the way
-- [ ] 3.7 Auto-scroll near the edges of the board and columns
-- [ ] 3.8 Wire it to the board: reorder cards within and across columns, and reorder columns
-- [ ] 3.9 FLIP animation on drop, disabled under `prefers-reduced-motion`
-- [ ] 3.10 Playwright e2e test for dragging a card across columns
+- [x] 3.1 `dnd/core/types.ts` and `collision.ts` (closest center / pointer-within), unit-tested
+- [x] 3.2 `DndProvider`: drag lifecycle state machine (`idle → pending → dragging → dropping`)
+- [x] 3.3 `useDraggable`: pointer down, an activation threshold (about 5px, so clicks still work), `setPointerCapture`
+- [x] 3.4 `useDroppable`: register containers and measure rects at drag start
+- [x] 3.5 `DragOverlay` in a portal, moved with `transform` inside `requestAnimationFrame`
+- [x] 3.6 Placeholder / drop indicator, and siblings shifting out of the way
+- [x] 3.7 Auto-scroll near the edges of the board and columns
+- [x] 3.8 Wire it to the board: reorder cards within and across columns, and reorder columns
+- [x] 3.9 FLIP animation on drop, disabled under `prefers-reduced-motion`
+- [x] 3.10 Playwright e2e test for dragging a card across columns
+
+**Departures from the plan:**
+
+- **Window listeners instead of `setPointerCapture`.** A card that moves to another column remounts as a new element, which would lose pointer capture.
+- **Live preview instead of shifting items with transforms.** The board renders `boardReducer(state, dragToAction(drag))`, so the dragged item's own element is the placeholder. A drop dispatches the same action. Drop targets are computed from a layout where the dragged item is removed, so they can't flicker back and forth.
+- **The overlay is a DOM clone managed outside React, not a React portal.** Moving it never re-renders anything.
+- **Positions are re-measured after every commit and scroll, not only at drag start.** Measuring uses `offsetTop`/`offsetLeft`, which ignore in-flight FLIP transforms.
+- **Found and fixed a Phase 2 layout bug.** The page scrolled sideways instead of the board (`grid-template-columns: minmax(0, 1fr)`).
+
+**Done when:** `npm run check` and `npm run test:e2e` pass, and the drag tests pass 5× in a row. ✅
 
 **Learn:** pointer events, coordinate math, state machines, rAF, avoiding layout thrashing, FLIP.
 

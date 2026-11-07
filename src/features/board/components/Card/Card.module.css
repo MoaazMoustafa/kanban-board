@@ -9,6 +9,9 @@
   background: var(--color-surface);
   box-shadow: var(--shadow-card);
   text-align: start;
+  /* Long-press drags on touch: no callout menu, no double-tap zoom delay. */
+  -webkit-touch-callout: none;
+  touch-action: manipulation;
   transition:
     box-shadow var(--duration-fast) var(--ease-out),
     border-color var(--duration-fast) var(--ease-out);
@@ -27,4 +30,28 @@
 .meta {
   display: flex;
   color: var(--color-text-muted);
+}
+
+/* Placeholder: the dragged card's own element, shown where it will land. */
+[data-dnd-active] > .card {
+  border: 2px dashed var(--color-border);
+  background: color-mix(in srgb, var(--color-text) 4%, transparent);
+  box-shadow: none;
+}
+
+[data-dnd-active] > .card > * {
+  visibility: hidden;
+}
+
+/* The floating copy while dragging. */
+:global([data-dnd-overlay]) .card {
+  height: 100%;
+  border-color: var(--color-border);
+  box-shadow: var(--shadow-dialog);
+  rotate: 2deg;
+  transition: rotate var(--duration-normal) var(--ease-out);
+}
+
+:global([data-dnd-overlay='settling']) .card {
+  rotate: 0deg;
 }

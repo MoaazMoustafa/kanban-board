@@ -1,6 +1,8 @@
 .app {
   display: grid;
   grid-template-rows: var(--header-height) minmax(0, 1fr);
+  /* minmax(0, …) lets the board shrink below its content width, so it scrolls instead of the page. */
+  grid-template-columns: minmax(0, 1fr);
   height: 100%;
 }
 
