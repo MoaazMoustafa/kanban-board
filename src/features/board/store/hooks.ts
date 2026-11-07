@@ -1,7 +1,14 @@
 import { use, useMemo, type Context } from 'react'
-import { boardActions, type BoardAction } from '../model/actions'
+import { historyActions } from '@/shared/lib/history'
+import { boardActions } from '../model/actions'
+import { describeAction } from '../model/history'
 import type { BoardState } from '../model/types'
-import { BoardDispatchContext, BoardStateContext } from './context'
+import {
+  BoardDispatchContext,
+  BoardHistoryContext,
+  BoardStateContext,
+  type BoardDispatch,
+} from './context'
 
 function useRequiredContext<T>(context: Context<T | null>, name: string): T {
   const value = use(context)
@@ -19,7 +26,7 @@ export function useBoardSelector<T>(selector: (state: BoardState) => T): T {
 }
 
 /** Raw dispatch, for code that already has an action object. */
-export function useBoardDispatch(): (action: BoardAction) => void {
+export function useBoardDispatch(): BoardDispatch {
   return useRequiredContext(BoardDispatchContext, 'useBoardDispatch')
 }
 
@@ -47,4 +54,28 @@ export function useBoardActions(): BoundActions {
       moveColumn: bind(boardActions.moveColumn),
     }
   }, [dispatch])
+}
+
+export interface BoardHistoryControls {
+  /** Label of the step undo would revert, e.g. "Move card “Fix login”"; null if none. */
+  undoLabel: string | null
+  redoLabel: string | null
+  undo: () => void
+  redo: () => void
+}
+
+export function useBoardHistory(): BoardHistoryControls {
+  const history = useRequiredContext(BoardHistoryContext, 'useBoardHistory')
+  const dispatch = useRequiredContext(BoardDispatchContext, 'useBoardHistory')
+  const last = history.past.at(-1)
+  const next = history.future[0]
+
+  return {
+    undoLabel: last ? describeAction(last.action, last.state) : null,
+    // A redo entry stores the state *after* its action; the label needs the state before it,
+    // which is the current state.
+    redoLabel: next ? describeAction(next.action, history.present) : null,
+    undo: useMemo(() => () => dispatch(historyActions.undo()), [dispatch]),
+    redo: useMemo(() => () => dispatch(historyActions.redo()), [dispatch]),
+  }
 }

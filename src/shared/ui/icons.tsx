@@ -46,3 +46,17 @@ export const TextIcon = (props: IconProps) => (
     <path d="M4 6h16M4 12h16M4 18h10" />
   </Icon>
 )
+
+export const UndoIcon = (props: IconProps) => (
+  <Icon {...props}>
+    <path d="M9 14 4 9l5-5" />
+    <path d="M4 9h10.5a5.5 5.5 0 0 1 0 11H11" />
+  </Icon>
+)
+
+export const RedoIcon = (props: IconProps) => (
+  <Icon {...props}>
+    <path d="m15 14 5-5-5-5" />
+    <path d="M20 9H9.5a5.5 5.5 0 0 0 0 11H13" />
+  </Icon>
+)

@@ -1,6 +1,10 @@
 import type { ReactNode } from 'react'
-import { BoardProvider, createSeedBoard } from '@/features/board'
+import { BoardDndProvider, BoardProvider, createSeedBoard } from '@/features/board'
 
 export function AppProviders({ children }: { children: ReactNode }) {
-  return <BoardProvider initialState={createSeedBoard()}>{children}</BoardProvider>
+  return (
+    <BoardProvider initialState={createSeedBoard()}>
+      <BoardDndProvider>{children}</BoardDndProvider>
+    </BoardProvider>
+  )
 }

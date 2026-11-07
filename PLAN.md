@@ -195,10 +195,20 @@ complex Ui/
 
 ### Phase 5: Undo/redo
 
-- [ ] 5.1 The `withHistory(reducer)` higher-order reducer, with a history limit (for example 100)
-- [ ] 5.2 Decide which actions are undoable (not UI-only state)
-- [ ] 5.3 Shortcuts: `Ctrl+Z` / `Ctrl+Shift+Z`, skipped while typing in inputs
-- [ ] 5.4 Undo/redo buttons, plus tests
+- [x] 5.1 The `withHistory(reducer)` higher-order reducer, with a history limit (for example 100)
+- [x] 5.2 Decide which actions are undoable (not UI-only state)
+- [x] 5.3 Shortcuts: `Ctrl+Z` / `Ctrl+Shift+Z`, skipped while typing in inputs
+- [x] 5.4 Undo/redo buttons, plus tests
+
+**Decisions made:**
+
+- `withHistory` is generic and lives in `shared/lib/history.ts`; the board wraps its reducer with it (`model/history.ts`).
+- It uses snapshots, not the command pattern. Structural sharing keeps snapshots cheap, and undoing a column delete restores its cards with no inverse logic.
+- Each entry stores its action, so the buttons and announcements can say what will be undone.
+- All 8 board actions are undoable. UI state never reaches the reducer, and no-ops aren't recorded.
+- One undo step per intent comes for free: edits are saved once, and drags commit once (the preview isn't recorded).
+- The shortcuts work on non-Latin layouts (falling back to `event.code`). They're skipped in text fields, in dialogs, and while `dragging`, but not while `dropping`, a bug the browser tests caught.
+- The buttons use `aria-disabled` so they keep keyboard focus.
 
 **Learn:** higher-order reducers, structural sharing, the command pattern compared with snapshots.
 

@@ -1,7 +1,7 @@
 import { render, type RenderOptions } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import type { ReactElement } from 'react'
-import { BoardProvider, type BoardState } from '@/features/board'
+import { BoardDndProvider, BoardProvider, type BoardState } from '@/features/board'
 import { makeBoard } from './factories'
 
 interface Options extends Omit<RenderOptions, 'wrapper'> {
@@ -16,7 +16,11 @@ export function renderWithProviders(
   return {
     user: userEvent.setup(),
     ...render(ui, {
-      wrapper: ({ children }) => <BoardProvider initialState={board}>{children}</BoardProvider>,
+      wrapper: ({ children }) => (
+        <BoardProvider initialState={board}>
+          <BoardDndProvider>{children}</BoardDndProvider>
+        </BoardProvider>
+      ),
       ...options,
     }),
   }

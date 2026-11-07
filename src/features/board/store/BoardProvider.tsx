@@ -1,7 +1,8 @@
 import { useReducer, type ReactNode } from 'react'
-import { boardReducer } from '../model/reducer'
+import { createHistory } from '@/shared/lib/history'
+import { boardHistoryReducer, type BoardHistory } from '../model/history'
 import type { BoardState } from '../model/types'
-import { BoardDispatchContext, BoardStateContext } from './context'
+import { BoardDispatchContext, BoardHistoryContext, BoardStateContext } from './context'
 
 interface BoardProviderProps {
   initialState: BoardState
@@ -9,11 +10,15 @@ interface BoardProviderProps {
 }
 
 export function BoardProvider({ initialState, children }: BoardProviderProps) {
-  const [state, dispatch] = useReducer(boardReducer, initialState)
+  const [history, dispatch] = useReducer(boardHistoryReducer, initialState, (state): BoardHistory =>
+    createHistory(state),
+  )
 
   return (
     <BoardDispatchContext value={dispatch}>
-      <BoardStateContext value={state}>{children}</BoardStateContext>
+      <BoardHistoryContext value={history}>
+        <BoardStateContext value={history.present}>{children}</BoardStateContext>
+      </BoardHistoryContext>
     </BoardDispatchContext>
   )
 }

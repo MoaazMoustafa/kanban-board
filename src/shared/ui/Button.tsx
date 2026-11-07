@@ -21,6 +21,7 @@ interface IconButtonProps extends Omit<ButtonProps, 'aria-label' | 'children'> {
 
 export function IconButton({ label, icon, className, ...props }: IconButtonProps) {
   return (
+    // `title` defaults to the label; pass one to show a longer tooltip.
     <Button aria-label={label} title={label} className={cx(styles.icon, className)} {...props}>
       {icon}
     </Button>

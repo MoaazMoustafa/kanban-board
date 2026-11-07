@@ -6,4 +6,6 @@ export * from './model/selectors'
 export type { BoardState, Card, CardId, Column, ColumnId } from './model/types'
 
 export { Board } from './components/Board/Board'
+export { HistoryControls } from './components/HistoryControls/HistoryControls'
+export { BoardDndProvider } from './store/BoardDndProvider'
 export { BoardProvider } from './store/BoardProvider'
