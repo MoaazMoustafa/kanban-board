@@ -1,4 +1,4 @@
-import type { CSSProperties, ReactNode } from 'react'
+import type { ComponentPropsWithRef, CSSProperties } from 'react'
 
 const style: CSSProperties = {
   position: 'absolute',
@@ -12,7 +12,7 @@ const style: CSSProperties = {
   border: 0,
 }
 
-/** Text for screen readers only. */
-export function VisuallyHidden({ children }: { children: ReactNode }) {
-  return <span style={style}>{children}</span>
+/** Content for screen readers only. Accepts span props, e.g. an `id` or `aria-live`. */
+export function VisuallyHidden(props: ComponentPropsWithRef<'span'>) {
+  return <span style={style} {...props} />
 }

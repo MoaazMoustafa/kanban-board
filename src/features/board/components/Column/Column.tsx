@@ -26,9 +26,11 @@ interface ColumnProps {
   columnId: ColumnId
   onOpenCard: (id: CardId) => void
   dragHandleProps?: SortableItem['handleProps']
+  /** ID of the drag instructions, announced with the column title (the header's focusable part). */
+  dragDescribedBy?: string
 }
 
-export function Column({ columnId, onOpenCard, dragHandleProps }: ColumnProps) {
+export function Column({ columnId, onOpenCard, dragHandleProps, dragDescribedBy }: ColumnProps) {
   const column = useBoardSelector((state) => selectColumn(state, columnId))
   const actions = useBoardActions()
   const headingId = useId()
@@ -69,6 +71,7 @@ export function Column({ columnId, onOpenCard, dragHandleProps }: ColumnProps) {
           <InlineEdit
             value={column.title}
             label="Column title"
+            describedBy={dragDescribedBy}
             onSave={(title) => actions.renameColumn(columnId, title)}
           />
         </h2>

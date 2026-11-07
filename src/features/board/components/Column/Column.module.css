@@ -5,16 +5,22 @@
   max-height: 100%;
 }
 
-/* Placeholder: where the dragged column will land. */
-.slot[data-dnd-active] {
+/* Pointer drag placeholder: where the dragged column will land. */
+.slot[data-dnd-active='pointer'] {
   border-radius: var(--radius-lg);
   outline: 2px dashed var(--color-border);
   outline-offset: -2px;
   background: color-mix(in srgb, var(--color-text) 4%, transparent);
 }
 
-.slot[data-dnd-active] > * {
+.slot[data-dnd-active='pointer'] > * {
   visibility: hidden;
+}
+
+/* Keyboard drag: the column itself is shown lifted in its new spot. */
+.slot[data-dnd-active='keyboard'] > .column {
+  outline: 2px solid var(--color-accent);
+  box-shadow: var(--shadow-card-hover);
 }
 
 /* The floating copy while dragging. */

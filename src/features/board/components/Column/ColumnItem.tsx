@@ -11,15 +11,20 @@ interface ColumnItemProps {
 
 /** The sortable slot around a column: the column's header is the drag handle. */
 export function ColumnItem({ columnId, onOpenCard }: ColumnItemProps) {
-  const { ref, handleProps, isDragging } = useSortableItem({
+  const { ref, handleProps, describedBy, dragMode } = useSortableItem({
     id: columnId,
     type: DRAG_TYPE.column,
     containerId: COLUMNS_CONTAINER_ID,
   })
 
   return (
-    <li ref={ref} className={styles.slot} data-dnd-active={isDragging || undefined}>
-      <Column columnId={columnId} onOpenCard={onOpenCard} dragHandleProps={handleProps} />
+    <li ref={ref} className={styles.slot} data-dnd-active={dragMode ?? undefined}>
+      <Column
+        columnId={columnId}
+        onOpenCard={onOpenCard}
+        dragHandleProps={handleProps}
+        dragDescribedBy={describedBy}
+      />
     </li>
   )
 }

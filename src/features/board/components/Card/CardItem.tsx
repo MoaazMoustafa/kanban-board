@@ -11,15 +11,20 @@ interface CardItemProps {
 
 /** The sortable list item around a card; the whole card is the drag handle. */
 export function CardItem({ cardId, columnId, onOpen }: CardItemProps) {
-  const { ref, handleProps, isDragging } = useSortableItem({
+  const { ref, handleProps, describedBy, dragMode } = useSortableItem({
     id: cardId,
     type: DRAG_TYPE.card,
     containerId: columnId,
   })
 
   return (
-    <li ref={ref} data-dnd-active={isDragging || undefined}>
-      <Card cardId={cardId} onOpen={onOpen} dragHandleProps={handleProps} />
+    <li ref={ref} data-dnd-active={dragMode ?? undefined}>
+      <Card
+        cardId={cardId}
+        onOpen={onOpen}
+        dragHandleProps={handleProps}
+        dragDescribedBy={describedBy}
+      />
     </li>
   )
 }

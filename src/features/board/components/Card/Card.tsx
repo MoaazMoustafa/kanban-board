@@ -10,9 +10,11 @@ interface CardProps {
   cardId: CardId
   onOpen: (id: CardId) => void
   dragHandleProps?: SortableItem['handleProps']
+  /** ID of the drag instructions, announced along with the card. */
+  dragDescribedBy?: string
 }
 
-export function Card({ cardId, onOpen, dragHandleProps }: CardProps) {
+export function Card({ cardId, onOpen, dragHandleProps, dragDescribedBy }: CardProps) {
   const card = useBoardSelector((state) => selectCard(state, cardId))
   const hintId = useId()
   if (!card) return null
@@ -24,7 +26,9 @@ export function Card({ cardId, onOpen, dragHandleProps }: CardProps) {
       type="button"
       className={styles.card}
       // The name stays the title; extra facts go in the description, where they belong.
-      aria-describedby={hasDescription ? hintId : undefined}
+      aria-describedby={
+        [hasDescription && hintId, dragDescribedBy].filter(Boolean).join(' ') || undefined
+      }
       onClick={() => onOpen(card.id)}
       {...dragHandleProps}
     >

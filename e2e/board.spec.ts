@@ -46,7 +46,7 @@ test.describe('card details dialog (native <dialog>)', () => {
 
     const card = page.getByRole('button', { name: 'Pick Lucide icons' })
     await expect(card).toBeVisible()
-    await expect(card).toHaveAccessibleDescription('Has description')
+    await expect(card).toHaveAccessibleDescription(/^Has description/)
   })
 })
 

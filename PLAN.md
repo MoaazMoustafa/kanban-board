@@ -176,10 +176,20 @@ complex Ui/
 
 ### Phase 4: Keyboard and screen-reader DnD
 
-- [ ] 4.1 `useKeyboardDnd`: Space/Enter picks up, arrows move, Space drops, Esc cancels
-- [ ] 4.2 An `aria-live` announcer ("Picked up card X. Position 2 of 5 in To Do.")
-- [ ] 4.3 Roving tabindex / focus management that keeps focus on the moved card
-- [ ] 4.4 Tests for the keyboard flow, and a manual screen-reader pass (Orca on Linux)
+- [x] 4.1 `useKeyboardDnd`: Space/Enter picks up, arrows move, Space drops, Esc cancels
+- [x] 4.2 An `aria-live` announcer ("Picked up card X. Position 2 of 5 in To Do.")
+- [x] 4.3 Roving tabindex / focus management that keeps focus on the moved card
+- [ ] 4.4 (automated part done; manual Orca pass still to do) Tests for the keyboard flow, and a manual screen-reader pass (Orca on Linux)
+
+**Decisions made:**
+
+- Space picks up and Enter keeps its normal meaning (open a card, rename a column).
+- Arrows along a list move within it, and the other arrow pair moves to the neighbouring list, ordered by position on screen.
+- Keyboard drags reuse the pointer pipeline (preview, FLIP, drop) without the floating copy.
+- The engine emits `start`/`move`/`drop`/`cancel` events. The board turns them into sentences (`describeDrag`) for an `aria-live` region, so the engine never knows about titles.
+- Focus follows the item through re-creation and is restored after drops.
+- Playwright now runs in Chromium **and Firefox**. That's how we proved a planned `keyup` workaround was unnecessary, so it was removed.
+- Fixed: `afterCommit` must focus and scroll _before_ FLIP, or `scrollIntoView` measures the item's old position.
 
 **Learn:** WAI-ARIA patterns, live regions, focus management.
 

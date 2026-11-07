@@ -21,6 +21,21 @@ if (typeof HTMLDialogElement.prototype.showModal !== 'function') {
 
 // jsdom does no layout, so scrolling is a no-op there.
 Element.prototype.scrollTo ??= function scrollTo() {}
+Element.prototype.scrollIntoView ??= function scrollIntoView() {}
+
+// jsdom has no matchMedia. Report reduced motion so code paths that would call the
+// (also missing) Web Animations API are skipped; animations are covered by Playwright.
+window.matchMedia ??= (query: string) =>
+  ({
+    matches: query.includes('prefers-reduced-motion: reduce'),
+    media: query,
+    onchange: null,
+    addEventListener() {},
+    removeEventListener() {},
+    addListener() {},
+    removeListener() {},
+    dispatchEvent: () => false,
+  }) as MediaQueryList
 
 afterEach(() => {
   cleanup()

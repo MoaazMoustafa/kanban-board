@@ -1,6 +1,7 @@
 import { autoScrollDelta } from './core/autoScroll'
 import { computeDropTarget, sameTarget } from './core/collision'
 import { distance, toRect } from './core/geometry'
+import { keyboardTarget } from './core/keyboard'
 import type { ActiveItem, Axis, DropTarget, MeasuredContainer, Point, Rect } from './core/types'
 import {
   canScroll,
@@ -15,17 +16,22 @@ import { createOverlay, type Overlay } from './overlay'
  * Drag lifecycle:
  *
  *   idle ──pointerdown──▶ pending ──moved 5px (mouse/pen) or held 250ms (touch)──▶ dragging
- *     ▲                     │ released / scrolled                                     │
- *     │◀────────────────────┘                                   drop / Escape / cancel │
- *     └──────────────── animation done ◀──────── dropping ◀────────────────────────────┘
+ *    │ ▲                    │ released / scrolled                                   ▲    │
+ *    │ │◀───────────────────┘                                                       │    │
+ *    │ │                                                                            │    │
+ *    └─┼──────────────────────────── Space on a handle (keyboard) ──────────────────┘    │
+ *      │                                                                                 │
+ *      └──────────────── settled ◀──────── dropping ◀──── drop / Escape / cancel ────────┘
  *
  * `pending` lives only in the engine; React sees idle, dragging and dropping.
  */
 
 export type DragStatus = 'idle' | 'dragging' | 'dropping'
+export type DragMode = 'pointer' | 'keyboard'
 
 export interface DragSnapshot {
   readonly status: DragStatus
+  readonly mode: DragMode | null
   readonly active: ActiveItem | null
   readonly target: DropTarget | null
 }
@@ -35,8 +41,18 @@ export interface DropEvent {
   readonly target: DropTarget
 }
 
+/** Lifecycle events, e.g. for screen-reader announcements. `cancel` has no target. */
+export type DragEvent =
+  | {
+      readonly type: 'start' | 'move' | 'drop'
+      readonly active: ActiveItem
+      readonly target: DropTarget
+    }
+  | { readonly type: 'cancel'; readonly active: ActiveItem; readonly target: null }
+
 export interface DndEngineOptions {
   onDrop: (event: DropEvent) => void
+  onEvent?: ((event: DragEvent) => void) | undefined
 }
 
 interface ContainerEntry {
@@ -62,26 +78,37 @@ interface Pending {
   timer: number | undefined
 }
 
-interface Session {
-  active: ActiveItem
+interface PointerTracking {
   pointerId: number
   start: Point
   pointer: Point
   origin: Rect
   overlay: Overlay
-  containers: MeasuredContainer[]
   scrollables: HTMLElement[]
-  target: DropTarget | null
+  frame: number
+}
+
+interface Session {
+  mode: DragMode
+  active: ActiveItem
+  /** Where the item started; the target a cancel returns to. */
+  home: DropTarget
+  target: DropTarget
+  containers: MeasuredContainer[]
   /** Layout changed (scroll or re-render) since the last measurement. */
   dirty: boolean
-  frame: number
+  /** Only for pointer drags. */
+  pointer: PointerTracking | null
   removeListeners: () => void
 }
 
-const IDLE: DragSnapshot = { status: 'idle', active: null, target: null }
+type FinishReason = 'drop' | 'escape' | 'cancel'
+
+const IDLE: DragSnapshot = { status: 'idle', mode: null, active: null, target: null }
 const ACTIVATION_DISTANCE = 5
 const TOUCH_DELAY = 250
 const IGNORE_SELECTOR = 'input, textarea, select, [contenteditable], [data-dnd-ignore]'
+const FOCUSABLE = 'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
 
 export type DndEngine = ReturnType<typeof createDndEngine>
 
@@ -98,11 +125,16 @@ export function createDndEngine(initialOptions: DndEngineOptions) {
   let session: Session | null = null
   /** Item positions captured just before a re-render, for FLIP. */
   let flipBefore: Map<string, Rect> | null = null
-  let settling: { overlay: Overlay; activeId: string } | null = null
+  /** A finished drag waiting for its overlay to land (or just for focus to be restored). */
+  let settling: { overlay: Overlay | null; activeId: string; mode: DragMode } | null = null
 
   function setSnapshot(next: DragSnapshot) {
     snapshot = next
     for (const listener of listeners) listener()
+  }
+
+  function emit(event: DragEvent) {
+    options.onEvent?.(event)
   }
 
   // ── Registry ────────────────────────────────────────────────────────────────
@@ -127,8 +159,9 @@ export function createDndEngine(initialOptions: DndEngineOptions) {
 
   function measure(type: string): MeasuredContainer[] {
     const itemsByElement = new Map<Element, ItemEntry>()
-    for (const item of items.values())
+    for (const item of items.values()) {
       if (item.type === type) itemsByElement.set(item.element, item)
+    }
 
     const result: MeasuredContainer[] = []
     for (const container of containers.values()) {
@@ -154,7 +187,44 @@ export function createDndEngine(initialOptions: DndEngineOptions) {
     return rects
   }
 
-  // ── Pending: deciding whether a press is a click, a scroll, or a drag ────────
+  // ── Starting a drag ─────────────────────────────────────────────────────────
+
+  /** Common setup for both modes. Returns null if the item can't be dragged right now. */
+  function begin(itemId: string, mode: DragMode, removeListeners: () => void): Session | null {
+    const item = items.get(itemId)
+    if (!item) return null
+
+    const measured = measure(item.type)
+    const homeIndex =
+      measured.find((c) => c.id === item.containerId)?.items.findIndex((i) => i.id === itemId) ?? -1
+    if (homeIndex === -1) return null
+
+    const home = { containerId: item.containerId, index: homeIndex }
+    session = {
+      mode,
+      active: { id: item.id, type: item.type, containerId: item.containerId },
+      home,
+      target: home,
+      containers: measured,
+      dirty: false,
+      pointer: null,
+      removeListeners,
+    }
+    setSnapshot({ status: 'dragging', mode, active: session.active, target: home })
+    emit({ type: 'start', active: session.active, target: home })
+    return session
+  }
+
+  /** Moves the drop target, capturing positions first so the re-render can animate (FLIP). */
+  function moveTarget(s: Session, target: DropTarget) {
+    if (sameTarget(target, s.target)) return
+    s.target = target
+    flipBefore = snapshotRects(s.active.type)
+    setSnapshot({ status: 'dragging', mode: s.mode, active: s.active, target })
+    emit({ type: 'move', active: s.active, target })
+  }
+
+  // ── Pointer: pending (click, scroll, or drag?) ──────────────────────────────
 
   function handlePointerDown(event: PointerEvent, itemId: string) {
     if (snapshot.status !== 'idle' || pending || session) return
@@ -172,7 +242,7 @@ export function createDndEngine(initialOptions: DndEngineOptions) {
       timer: undefined,
     }
     if (event.pointerType === 'touch') {
-      pending.timer = window.setTimeout(() => pending && activate(pending.last), TOUCH_DELAY)
+      pending.timer = window.setTimeout(() => pending && activatePointer(pending.last), TOUCH_DELAY)
     }
     window.addEventListener('pointermove', onPendingMove)
     window.addEventListener('pointerup', clearPending)
@@ -187,7 +257,7 @@ export function createDndEngine(initialOptions: DndEngineOptions) {
 
     // Touch: moving before the delay means the user is scrolling, not dragging.
     if (pending.pointerType === 'touch') clearPending()
-    else activate(pending.last)
+    else activatePointer(pending.last)
   }
 
   function clearPending() {
@@ -200,78 +270,76 @@ export function createDndEngine(initialOptions: DndEngineOptions) {
     window.removeEventListener('contextmenu', preventDefault)
   }
 
-  // ── Dragging ────────────────────────────────────────────────────────────────
+  // ── Pointer: dragging ───────────────────────────────────────────────────────
 
-  function activate(pointer: Point) {
+  function activatePointer(pointer: Point) {
     if (!pending) return
     const { itemId, pointerId, start } = pending
     clearPending()
 
-    const item = items.get(itemId)
-    if (!item) return
-
-    const origin = toRect(item.element.getBoundingClientRect())
-    const measured = measure(item.type)
-    const home = measured.find((c) => c.id === item.containerId)
-    const homeIndex = home?.items.findIndex((i) => i.id === itemId) ?? -1
-    const scrollables = [
-      ...new Set(measured.flatMap((c) => getScrollableAncestors(containers.get(c.id)!.element))),
-    ]
+    const element = items.get(itemId)?.element
+    if (!element) return
+    const origin = toRect(element.getBoundingClientRect())
 
     const onMove = (event: PointerEvent) => {
-      if (event.pointerId !== pointerId || !session) return
-      session.pointer = { x: event.clientX, y: event.clientY }
+      if (event.pointerId === pointerId && session?.pointer) {
+        session.pointer.pointer = { x: event.clientX, y: event.clientY }
+      }
     }
     const onUp = (event: PointerEvent) => {
       if (event.pointerId === pointerId) finish('drop')
     }
-    const onScroll = () => {
-      if (session) session.dirty = true
+    const removeListeners = () => {
+      window.removeEventListener('pointermove', onMove)
+      window.removeEventListener('pointerup', onUp)
+      window.removeEventListener('pointercancel', onCancel)
+      window.removeEventListener('blur', onCancel)
+      window.removeEventListener('keydown', onPointerDragKeyDown, true)
+      window.removeEventListener('scroll', onScroll, true)
+      window.removeEventListener('contextmenu', preventDefault)
+      window.removeEventListener('touchmove', preventDefault)
     }
+
+    const s = begin(itemId, 'pointer', removeListeners)
+    if (!s) return
 
     window.addEventListener('pointermove', onMove)
     window.addEventListener('pointerup', onUp)
     window.addEventListener('pointercancel', onCancel)
     window.addEventListener('blur', onCancel)
-    window.addEventListener('keydown', onKeyDown, true)
+    window.addEventListener('keydown', onPointerDragKeyDown, true)
     window.addEventListener('scroll', onScroll, true)
     window.addEventListener('contextmenu', preventDefault)
     // Stop the page from scrolling under a touch drag (needs a non-passive listener).
     window.addEventListener('touchmove', preventDefault, { passive: false })
 
-    session = {
-      active: { id: item.id, type: item.type, containerId: item.containerId },
+    s.pointer = {
       pointerId,
       start,
       pointer,
       origin,
-      overlay: createOverlay(item.element, origin),
-      containers: measured,
-      scrollables,
-      target: homeIndex === -1 ? null : { containerId: item.containerId, index: homeIndex },
-      dirty: false,
-      frame: 0,
-      removeListeners() {
-        window.removeEventListener('pointermove', onMove)
-        window.removeEventListener('pointerup', onUp)
-        window.removeEventListener('pointercancel', onCancel)
-        window.removeEventListener('blur', onCancel)
-        window.removeEventListener('keydown', onKeyDown, true)
-        window.removeEventListener('scroll', onScroll, true)
-        window.removeEventListener('contextmenu', preventDefault)
-        window.removeEventListener('touchmove', preventDefault)
-      },
+      overlay: createOverlay(element, origin),
+      scrollables: [
+        ...new Set(
+          s.containers.flatMap((c) => {
+            const container = containers.get(c.id)
+            return container ? getScrollableAncestors(container.element) : []
+          }),
+        ),
+      ],
+      frame: requestAnimationFrame(tick),
     }
-
     document.documentElement.dataset['dndDragging'] = ''
     window.getSelection()?.removeAllRanges()
-    setSnapshot({ status: 'dragging', active: session.active, target: session.target })
-    session.frame = requestAnimationFrame(tick)
   }
 
   const onCancel = () => finish('cancel')
 
-  function onKeyDown(event: KeyboardEvent) {
+  function onScroll() {
+    if (session) session.dirty = true
+  }
+
+  function onPointerDragKeyDown(event: KeyboardEvent) {
     if (event.key !== 'Escape') return
     event.preventDefault()
     event.stopPropagation()
@@ -281,75 +349,165 @@ export function createDndEngine(initialOptions: DndEngineOptions) {
   /** One frame: read layout, compute the target, then write (overlay position, scrolling). */
   function tick() {
     const s = session
-    if (!s) return
+    const p = s?.pointer
+    if (!s || !p) return
 
     if (s.dirty) {
       s.containers = measure(s.active.type)
       s.dirty = false
     }
 
-    const target = computeDropTarget(s.pointer, s.containers, s.active.id)
-    if (target && !sameTarget(target, s.target)) {
-      s.target = target
-      flipBefore = snapshotRects(s.active.type)
-      setSnapshot({ status: 'dragging', active: s.active, target })
-    }
+    const target = computeDropTarget(p.pointer, s.containers, s.active.id)
+    if (target) moveTarget(s, target)
 
-    s.overlay.moveTo(
-      s.origin.left + s.pointer.x - s.start.x,
-      s.origin.top + s.pointer.y - s.start.y,
+    p.overlay.moveTo(
+      p.origin.left + p.pointer.x - p.start.x,
+      p.origin.top + p.pointer.y - p.start.y,
     )
 
-    for (const element of s.scrollables) {
-      const delta = autoScrollDelta(s.pointer, element.getBoundingClientRect())
+    for (const element of p.scrollables) {
+      const delta = autoScrollDelta(p.pointer, element.getBoundingClientRect())
       const x = canScroll(element, 'horizontal') ? delta.x : 0
       const y = canScroll(element, 'vertical') ? delta.y : 0
       if (x || y) element.scrollBy(x, y)
     }
 
-    s.frame = requestAnimationFrame(tick)
+    p.frame = requestAnimationFrame(tick)
   }
 
+  // ── Keyboard ────────────────────────────────────────────────────────────────
+
+  /** Space on a handle picks the item up. Enter is left alone (it opens or edits). */
+  function handleKeyDown(event: KeyboardEvent, itemId: string) {
+    if (event.key !== ' ' || event.repeat) return
+    if (snapshot.status !== 'idle' || pending || session) return
+    if (event.target instanceof Element && event.target.closest(IGNORE_SELECTOR)) return
+
+    // Cancelling keydown also cancels the button's own Space "click" (verified in Chrome and Firefox).
+    event.preventDefault()
+    const removeListeners = () => {
+      window.removeEventListener('keydown', onKeyboardDragKeyDown, true)
+      window.removeEventListener('pointerdown', onCancel, true)
+      window.removeEventListener('blur', onCancel)
+    }
+    if (!begin(itemId, 'keyboard', removeListeners)) return
+
+    window.addEventListener('keydown', onKeyboardDragKeyDown, true)
+    window.addEventListener('pointerdown', onCancel, true)
+    window.addEventListener('blur', onCancel)
+  }
+
+  function onKeyboardDragKeyDown(event: KeyboardEvent) {
+    const s = session
+    if (!s || s.mode !== 'keyboard') return
+
+    // While carrying an item, the keyboard belongs to the drag.
+    event.preventDefault()
+    event.stopPropagation()
+    if (event.repeat && (event.key === ' ' || event.key === 'Enter')) return
+
+    switch (event.key) {
+      case ' ':
+      case 'Enter':
+        finish('drop')
+        return
+      case 'Escape':
+        finish('cancel')
+        return
+      case 'Tab':
+        return // Keep focus on the carried item.
+      default:
+        s.containers = measure(s.active.type)
+        moveTarget(s, keyboardTarget(event.key, s.target, s.containers, s.active.id))
+    }
+  }
+
+  // ── Finishing ───────────────────────────────────────────────────────────────
+
   /**
-   * - drop: released normally; commit the target.
-   * - escape: cancelled with the button still held, so the coming release must not click.
-   * - cancel: the browser took the pointer away (pointercancel, window blur); nothing to suppress.
+   * - drop: commit the target.
+   * - escape: pointer drag cancelled with the button still held; the coming release must not click.
+   * - cancel: Escape in keyboard mode, or the browser took the pointer away; nothing to suppress.
    */
-  function finish(reason: 'drop' | 'escape' | 'cancel') {
+  function finish(reason: FinishReason) {
     const s = session
     if (!s) return
     session = null
-    cancelAnimationFrame(s.frame)
     s.removeListeners()
-    delete document.documentElement.dataset['dndDragging']
-    // The release that ends a drag must not also "click" whatever is under the pointer.
-    if (reason !== 'cancel') suppressNextClick({ untilNextPointerUp: reason === 'escape' })
+
+    const p = s.pointer
+    if (p) {
+      cancelAnimationFrame(p.frame)
+      delete document.documentElement.dataset['dndDragging']
+      // The release that ends a drag must not also "click" whatever is under the pointer.
+      if (reason !== 'cancel') suppressNextClick({ untilNextPointerUp: reason === 'escape' })
+    }
 
     flipBefore = snapshotRects(s.active.type)
-    if (reason === 'drop' && s.target) options.onDrop({ active: s.active, target: s.target })
-    settling = { overlay: s.overlay, activeId: s.active.id }
-    setSnapshot({ status: 'dropping', active: s.active, target: null })
+    if (reason === 'drop') {
+      options.onDrop({ active: s.active, target: s.target })
+      emit({ type: 'drop', active: s.active, target: s.target })
+    } else {
+      emit({ type: 'cancel', active: s.active, target: null })
+    }
+    settling = { overlay: p?.overlay ?? null, activeId: s.active.id, mode: s.mode }
+    setSnapshot({ status: 'dropping', mode: s.mode, active: s.active, target: null })
   }
 
   // ── After React commits ─────────────────────────────────────────────────────
 
-  /** Called from a layout effect after each snapshot render: animate moves, then settle a drop. */
+  /**
+   * Called from a layout effect after each render. Order matters: everything that measures or
+   * scrolls to final positions runs first, because FLIP then temporarily moves items back to
+   * where they were (for one frame they *look* like they haven't moved).
+   */
   function afterCommit() {
+    if (session) session.dirty = true
+    if (session?.mode === 'keyboard') keepFocus(session.active.id, { scroll: true })
+
+    let landed: Rect | undefined
+    const done = snapshot.status === 'dropping' ? settling : null
+    if (done) {
+      settling = null
+      // A moved item may have been re-created; give focus back so keyboard users don't lose their place.
+      keepFocus(done.activeId, {
+        scroll: done.mode === 'keyboard',
+        onlyIfLost: done.mode === 'pointer',
+      })
+      const element = items.get(done.activeId)?.element
+      landed = element && toRect(element.getBoundingClientRect())
+    }
+
     if (flipBefore) {
       runFlip(flipBefore)
       flipBefore = null
     }
-    if (session) session.dirty = true
 
-    if (settling && snapshot.status === 'dropping') {
-      const { overlay, activeId } = settling
-      settling = null
-      const landed = items.get(activeId)?.element.getBoundingClientRect()
-      void overlay.settleTo(landed && toRect(landed)).then(() => {
-        overlay.destroy()
+    if (done) {
+      const settle = done.overlay ? done.overlay.settleTo(landed) : Promise.resolve()
+      void settle.then(() => {
+        done.overlay?.destroy()
         if (snapshot.status === 'dropping') setSnapshot(IDLE)
       })
     }
+  }
+
+  /** Puts focus back on the item's handle (or the first focusable element inside it). */
+  function keepFocus(itemId: string, { scroll = false, onlyIfLost = false } = {}) {
+    const element = items.get(itemId)?.element
+    if (!element) return
+    const focused = document.activeElement
+    const lost = !focused || focused === document.body || !focused.isConnected
+    if (onlyIfLost && !lost) return
+
+    if (!element.contains(focused)) {
+      const handle = element.querySelector<HTMLElement>('[data-dnd-handle]') ?? element
+      const target = handle.matches(FOCUSABLE)
+        ? handle
+        : handle.querySelector<HTMLElement>(FOCUSABLE)
+      target?.focus({ preventScroll: true })
+    }
+    if (scroll) element.scrollIntoView({ block: 'nearest', inline: 'nearest' })
   }
 
   /** FLIP: First (rects before), Last (rects now), Invert (translate back), Play (animate to 0). */
@@ -377,7 +535,7 @@ export function createDndEngine(initialOptions: DndEngineOptions) {
   function cancel() {
     clearPending()
     if (session) finish('cancel')
-    settling?.overlay.destroy()
+    settling?.overlay?.destroy()
     settling = null
     if (snapshot.status !== 'idle') setSnapshot(IDLE)
   }
@@ -394,6 +552,7 @@ export function createDndEngine(initialOptions: DndEngineOptions) {
     registerContainer,
     registerItem,
     handlePointerDown,
+    handleKeyDown,
     afterCommit,
     cancel,
   }

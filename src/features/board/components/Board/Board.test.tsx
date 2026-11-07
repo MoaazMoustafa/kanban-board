@@ -124,7 +124,7 @@ describe('card details', () => {
 
     expect(screen.queryByRole('dialog', { name: 'Edit card' })).not.toBeInTheDocument()
     const card = screen.getByRole('button', { name: 'Renamed' })
-    expect(card).toHaveAccessibleDescription('Has description')
+    expect(card).toHaveAccessibleDescription(/^Has description/)
     expect(card).toHaveFocus()
   })
 

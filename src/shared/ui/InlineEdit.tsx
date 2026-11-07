@@ -7,6 +7,8 @@ interface InlineEditProps {
   onSave: (value: string) => void
   /** Accessible label for the input, e.g. "Column title". */
   label: string
+  /** aria-describedby for the text button, e.g. extra keyboard instructions. */
+  describedBy?: string | undefined
   className?: string
 }
 
@@ -15,7 +17,7 @@ interface InlineEditProps {
  * After Enter/Escape focus returns to the text button; after a blur it stays wherever
  * the user clicked, so we never steal focus back.
  */
-export function InlineEdit({ value, onSave, label, className }: InlineEditProps) {
+export function InlineEdit({ value, onSave, label, describedBy, className }: InlineEditProps) {
   const [draft, setDraft] = useState<string | null>(null)
   const inputRef = useRef<HTMLInputElement>(null)
   const buttonRef = useRef<HTMLButtonElement>(null)
@@ -45,6 +47,7 @@ export function InlineEdit({ value, onSave, label, className }: InlineEditProps)
         type="button"
         className={cx(styles.display, className)}
         title={`Edit ${label.toLowerCase()}`}
+        aria-describedby={describedBy}
         onClick={() => setDraft(value)}
       >
         {value}

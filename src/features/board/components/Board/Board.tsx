@@ -1,6 +1,6 @@
 import { useCallback, useState } from 'react'
-import { DndProvider, useSortableContainer, type DropEvent } from '@/features/dnd'
-import { COLUMNS_CONTAINER_ID, DRAG_TYPE, dragToAction } from '../../model/drag'
+import { DndProvider, useSortableContainer, type DragEvent, type DropEvent } from '@/features/dnd'
+import { COLUMNS_CONTAINER_ID, describeDrag, DRAG_TYPE, dragToAction } from '../../model/drag'
 import { selectColumnOrder } from '../../model/selectors'
 import type { CardId } from '../../model/types'
 import { BoardDragPreview } from '../../store/BoardDragPreview'
@@ -20,8 +20,12 @@ export function Board() {
     [dispatch],
   )
 
+  // The committed state (outside the preview), which describeDrag needs for positions.
+  const state = useBoardSelector((s) => s)
+  const announce = useCallback((event: DragEvent) => describeDrag(state, event), [state])
+
   return (
-    <DndProvider onDrop={handleDrop}>
+    <DndProvider onDrop={handleDrop} announce={announce}>
       <BoardDragPreview>
         <BoardColumns />
       </BoardDragPreview>

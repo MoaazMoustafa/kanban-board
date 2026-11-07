@@ -32,14 +32,14 @@
   color: var(--color-text-muted);
 }
 
-/* Placeholder: the dragged card's own element, shown where it will land. */
-[data-dnd-active] > .card {
+/* Pointer drag placeholder: the dragged card's own element, shown where it will land. */
+[data-dnd-active='pointer'] > .card {
   border: 2px dashed var(--color-border);
   background: color-mix(in srgb, var(--color-text) 4%, transparent);
   box-shadow: none;
 }
 
-[data-dnd-active] > .card > * {
+[data-dnd-active='pointer'] > .card > * {
   visibility: hidden;
 }
 
@@ -54,4 +54,12 @@
 
 :global([data-dnd-overlay='settling']) .card {
   rotate: 0deg;
+}
+
+/* Keyboard drag: no overlay, so the card itself is shown lifted in its new spot. */
+[data-dnd-active='keyboard'] > .card {
+  border-color: var(--color-accent);
+  box-shadow:
+    0 0 0 2px var(--color-accent-soft),
+    var(--shadow-card-hover);
 }

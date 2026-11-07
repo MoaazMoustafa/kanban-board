@@ -132,7 +132,8 @@ test('reorders columns by dragging the header', async ({ page }) => {
 
 test('auto-scrolls the board near its edge', async ({ page }) => {
   await page.setViewportSize({ width: 700, height: 600 })
-  const board = page.locator('main > div')
+  // The scrolling element is the parent of the columns list.
+  const board = page.getByRole('list', { name: 'Columns' }).locator('..')
   expect(await board.evaluate((el) => el.scrollLeft)).toBe(0)
 
   const viewport = page.viewportSize()!
