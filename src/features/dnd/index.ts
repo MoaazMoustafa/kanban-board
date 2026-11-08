@@ -1,5 +1,5 @@
 export type { ActiveItem, Axis, DropTarget } from './core/types'
 export { DndProvider } from './DndProvider'
 export type { DragEvent, DragMode, DragSnapshot, DragStatus, DropEvent } from './engine'
-export { useDragState, useSortableContainer, useSortableItem } from './hooks'
-export type { SortableItem } from './hooks'
+export { useDragState, useDragStore, useSortableContainer, useSortableItem } from './hooks'
+export type { DragStore, SortableItem } from './hooks'

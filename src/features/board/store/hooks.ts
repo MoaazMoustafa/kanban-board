@@ -1,14 +1,10 @@
-import { use, useMemo, type Context } from 'react'
+import { use, useMemo, useSyncExternalStore, type Context } from 'react'
 import { historyActions } from '@/shared/lib/history'
 import { boardActions } from '../model/actions'
 import { describeAction } from '../model/history'
 import type { BoardState } from '../model/types'
-import {
-  BoardDispatchContext,
-  BoardHistoryContext,
-  BoardStateContext,
-  type BoardDispatch,
-} from './context'
+import type { BoardStore } from './boardStore'
+import { BoardStateSourceContext, BoardStoreContext } from './context'
 
 function useRequiredContext<T>(context: Context<T | null>, name: string): T {
   const value = use(context)
@@ -16,18 +12,24 @@ function useRequiredContext<T>(context: Context<T | null>, name: string): T {
   return value
 }
 
+/** The real store, for code that needs dispatch or the committed state outside rendering. */
+export function useBoardStore(): BoardStore {
+  return useRequiredContext(BoardStoreContext, 'useBoardStore')
+}
+
 /**
- * Reads a slice of board state. Today every caller re-renders on any board change, because
- * Context has no way to subscribe to a slice. The API is shaped like `useSyncExternalStore`
- * on purpose: in Phase 7 we swap the implementation and only changed slices re-render.
+ * Reads a slice of board state and re-renders only when that slice changes (compared with
+ * Object.is). The selector must return existing objects or primitives, never build new ones,
+ * or the component would re-render on every change.
  */
 export function useBoardSelector<T>(selector: (state: BoardState) => T): T {
-  return selector(useRequiredContext(BoardStateContext, 'useBoardSelector'))
+  const source = useRequiredContext(BoardStateSourceContext, 'useBoardSelector')
+  return useSyncExternalStore(source.subscribe, () => selector(source.getState()))
 }
 
 /** Raw dispatch, for code that already has an action object. */
-export function useBoardDispatch(): BoardDispatch {
-  return useRequiredContext(BoardDispatchContext, 'useBoardDispatch')
+export function useBoardDispatch(): BoardStore['dispatch'] {
+  return useBoardStore().dispatch
 }
 
 type BoundActions = {
@@ -36,7 +38,7 @@ type BoundActions = {
 
 /** Action creators bound to dispatch: `actions.moveCard(id, col, 0)`. Stable across renders. */
 export function useBoardActions(): BoundActions {
-  const dispatch = useRequiredContext(BoardDispatchContext, 'useBoardActions')
+  const { dispatch } = useBoardStore()
   return useMemo(() => {
     const bind =
       <A extends unknown[]>(create: (...args: A) => Parameters<typeof dispatch>[0]) =>
@@ -65,8 +67,9 @@ export interface BoardHistoryControls {
 }
 
 export function useBoardHistory(): BoardHistoryControls {
-  const history = useRequiredContext(BoardHistoryContext, 'useBoardHistory')
-  const dispatch = useRequiredContext(BoardDispatchContext, 'useBoardHistory')
+  const store = useBoardStore()
+  const history = useSyncExternalStore(store.subscribe, store.getHistory)
+  const { dispatch } = store
   const last = history.past.at(-1)
   const next = history.future[0]
 

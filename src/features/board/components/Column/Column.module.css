@@ -3,6 +3,13 @@
   flex: 0 0 var(--column-width);
   display: flex;
   max-height: 100%;
+  /*
+   * Off-screen columns skip style, layout and paint, yet stay in the DOM (drag and drop,
+   * focus, screen readers and find-in-page keep working). `auto` in contain-intrinsic-size
+   * makes the browser remember each column's last rendered size instead of guessing.
+   */
+  content-visibility: auto;
+  contain-intrinsic-size: auto var(--column-width) auto 40rem;
 }
 
 /* Pointer drag placeholder: where the dragged column will land. */

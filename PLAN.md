@@ -251,12 +251,47 @@ The costs: keys can grow with repeated inserts in the same gap (fixed by occasio
 
 ### Phase 7: Performance
 
-- [ ] 7.1 A seed generator for 50 columns × 5,000 cards. Profile with the React DevTools Profiler.
-- [ ] 7.2 Move to an external store + `useSyncExternalStore` + narrow selectors
-- [ ] 7.3 Use `React.memo` / stable callbacks where profiling shows they help
-- [ ] 7.4 Virtualize long columns (hand-written windowing, then compare with `@tanstack/react-virtual`)
-- [ ] 7.5 Make DnD work with virtualized lists (measuring rows that aren't rendered)
-- [ ] 7.6 Record before/after numbers in this file
+- [x] 7.1 A seed generator for 50 columns × 5,000 cards. Profile with the React DevTools Profiler.
+- [x] 7.2 Move to an external store + `useSyncExternalStore` + narrow selectors
+- [x] 7.3 Use `React.memo` / stable callbacks where profiling shows they help
+- [ ] ~~7.4 Virtualize long columns~~: **skipped on purpose** (see below)
+- [ ] ~~7.5 Make DnD work with virtualized lists~~: **skipped on purpose**
+- [x] 7.6 Record before/after numbers in this file
+
+**How we measure:** `npm run bench [-- 50x100]` builds for production, opens `?bench=50x100` (a generated board kept in memory), and times real DOM events until the next frame paints. It reports the median and worst of 15 runs. About 16ms (one frame) is the floor.
+
+**Results, 50 columns × 100 cards = 5,000 cards (median ms):**
+
+| Scenario                      |   Baseline | + FLIP fix | + store & memo | + content-visibility |
+| ----------------------------- | ---------: | ---------: | -------------: | -------------------: |
+| Load until painted            |        540 |        540 |            599 |              **449** |
+| Rename a column               |         33 |         31 |          **6** |                    6 |
+| Add a card                    |         34 |         33 |          **9** |                   10 |
+| Undo                          |         34 |         37 |         **15** |                   15 |
+| Open a card                   |         89 |         92 |             67 |               **55** |
+| Drag: pick up (Space)         |         48 |         54 |         **22** |                   31 |
+| Drag: move within a column    |         70 |         57 |         **27** |                   31 |
+| Drag: move to the next column |  **9,912** |    **100** |             69 |                   68 |
+| Drag: cancel                  | **13,199** |     **68** |             25 |                   14 |
+
+At 20 × 50 = 1,000 cards, every interaction is one to two frames (7–23ms), and load is 364ms.
+
+**What we found:**
+
+- **The benchmark's own generator was the "slow load".** It replayed 5,000 `addCard`s through the reducer, which is O(n²): 2.8s. It now builds the objects directly. _Measure before optimizing:_ we nearly virtualized lists to fix a slowdown in the test harness.
+- **A real FLIP bug, about 10s per keyboard move across columns.**
+  - The cause: positions were compared on screen, so a scroll looked like every card had moved. Read/write interleaving then forced a layout per item (layout thrashing).
+  - The fix: FLIP only the containers involved in the move, measure before scrolling, and batch all reads before all writes.
+- **Context re-rendered every card on any change.** An external store plus `useSyncExternalStore` selectors, a narrow "am I dragged?" subscription per item, and `memo` on list items cut most updates to the components whose data changed.
+- **What's left is browser work proportional to DOM size, not React.** A bare `showModal()` costs 13ms on a small board and 56ms with 5,000 cards, because the page becomes inert and is restyled. `content-visibility: auto` on columns trims this, but only fewer DOM nodes (windowing) would remove it.
+
+**Why we skipped windowing (7.4/7.5):** after the fixes, interactions take one to two frames up to about 1,000 cards and stay under 100ms at 5,000. Windowing would only help extreme boards. It would cost:
+
+- the engine measuring, focusing and announcing cards that aren't rendered;
+- find-in-page working only on visible cards;
+- screen-reader users losing the ability to browse every card.
+
+`content-visibility: auto` on columns gets part of the benefit with none of those costs. Revisit if real boards grow past several thousand cards.
 
 **Learn:** render profiling, subscription granularity, virtualization trade-offs.
 

@@ -17,6 +17,13 @@ function useDndContext(): DndContextValue {
   return context
 }
 
+/** The drag state as a store, for code that subscribes outside rendering (e.g. derived state). */
+export type DragStore = Pick<DndContextValue['engine'], 'subscribe' | 'getSnapshot'>
+
+export function useDragStore(): DragStore {
+  return useDndContext().engine
+}
+
 /** The current drag: status, mode, active item and drop target. Re-renders when any change. */
 export function useDragState(): DragSnapshot {
   const { engine } = useDndContext()
@@ -70,7 +77,12 @@ export interface SortableItem {
 
 export function useSortableItem({ id, type, containerId }: SortableItemOptions): SortableItem {
   const { engine, instructionsId } = useDndContext()
-  const { active, mode } = useDragState()
+  // Subscribes to "how am I being dragged?" only: a primitive, so when the drag changes, only
+  // the item whose answer changed re-renders, not every item on the board.
+  const dragMode = useSyncExternalStore(engine.subscribe, () => {
+    const { active, mode } = engine.getSnapshot()
+    return active?.id === id ? mode : null
+  })
 
   const ref = useCallback(
     (element: HTMLElement | null) =>
@@ -91,6 +103,6 @@ export function useSortableItem({ id, type, containerId }: SortableItemOptions):
     ref,
     handleProps,
     describedBy: instructionsId,
-    dragMode: active?.id === id ? mode : null,
+    dragMode,
   }
 }

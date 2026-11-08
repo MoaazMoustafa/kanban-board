@@ -1,16 +1,11 @@
-import { createContext, type Dispatch } from 'react'
-import type { HistoryAction } from '@/shared/lib/history'
-import type { BoardAction } from '../model/actions'
-import type { BoardHistory } from '../model/history'
-import type { BoardState } from '../model/types'
+import { createContext } from 'react'
+import type { BoardStateSource, BoardStore } from './boardStore'
 
-export type BoardDispatch = Dispatch<BoardAction | HistoryAction<BoardState>>
+/** The real store: dispatch, history, and the committed state. */
+export const BoardStoreContext = createContext<BoardStore | null>(null)
 
-/*
- * State and dispatch live in separate contexts. `dispatch` never changes, so components that
- * only *send* actions (forms, buttons) don't re-render when the board changes.
- * History has its own context: only undo/redo controls care about it.
+/**
+ * Where components read state from. Usually the store itself; inside the drag preview, a
+ * derived source that shows the board as if the drop had already happened.
  */
-export const BoardStateContext = createContext<BoardState | null>(null)
-export const BoardDispatchContext = createContext<BoardDispatch | null>(null)
-export const BoardHistoryContext = createContext<BoardHistory | null>(null)
+export const BoardStateSourceContext = createContext<BoardStateSource | null>(null)

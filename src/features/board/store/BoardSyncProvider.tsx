@@ -3,7 +3,7 @@ import { historyActions } from '@/shared/lib/history'
 import { useToast } from '@/shared/ui/toastContext'
 import type { BoardRepository, BoardSnapshot } from '../persistence/repository'
 import { createBoardSync, type ReplaceReason } from '../persistence/sync'
-import { useBoardDispatch, useBoardSelector } from './hooks'
+import { useBoardStore } from './hooks'
 import { BoardSyncContext } from './syncContext'
 
 const REPLACE_MESSAGES: Record<ReplaceReason, { message: string; tone: 'info' | 'error' } | null> =
@@ -27,9 +27,8 @@ interface BoardSyncProviderProps {
  * from elsewhere. Must be inside BoardProvider and ToastProvider.
  */
 export function BoardSyncProvider({ repository, initial, children }: BoardSyncProviderProps) {
-  const dispatch = useBoardDispatch()
+  const store = useBoardStore()
   const toast = useToast()
-  const board = useBoardSelector((state) => state)
 
   // Created once; it only starts doing anything when connected below.
   const [sync] = useState(() =>
@@ -38,7 +37,7 @@ export function BoardSyncProvider({ repository, initial, children }: BoardSyncPr
       initial,
       onReplace(next, reason) {
         // Resets history too: old snapshots would bring back what the server just rejected.
-        dispatch(historyActions.reset(next))
+        store.dispatch(historyActions.reset(next))
         const notice = REPLACE_MESSAGES[reason]
         if (notice) toast(notice)
       },
@@ -47,9 +46,11 @@ export function BoardSyncProvider({ repository, initial, children }: BoardSyncPr
 
   useEffect(() => sync.connect(), [sync])
 
+  // Subscribes directly instead of selecting state: saving never needs a re-render.
   useEffect(() => {
-    sync.update(board)
-  }, [sync, board])
+    sync.update(store.getState())
+    return store.subscribe(() => sync.update(store.getState()))
+  }, [sync, store])
 
   // Tell the user once when saving starts failing; the header shows the ongoing status.
   useEffect(

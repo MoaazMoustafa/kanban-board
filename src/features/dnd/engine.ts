@@ -179,10 +179,17 @@ export function createDndEngine(initialOptions: DndEngineOptions) {
     return result
   }
 
-  function snapshotRects(type: string): Map<string, Rect> {
+  /**
+   * Where items are on screen now, for FLIP. Only the containers involved in a move can change
+   * layout, so only their items are measured: 3 columns instead of every card on the board.
+   */
+  function snapshotRects(type: string, containerIds: Iterable<string>): Map<string, Rect> {
+    const involved = new Set(containerIds)
     const rects = new Map<string, Rect>()
     for (const item of items.values()) {
-      if (item.type === type) rects.set(item.id, toRect(item.element.getBoundingClientRect()))
+      if (item.type === type && involved.has(item.containerId)) {
+        rects.set(item.id, toRect(item.element.getBoundingClientRect()))
+      }
     }
     return rects
   }
@@ -218,8 +225,12 @@ export function createDndEngine(initialOptions: DndEngineOptions) {
   /** Moves the drop target, capturing positions first so the re-render can animate (FLIP). */
   function moveTarget(s: Session, target: DropTarget) {
     if (sameTarget(target, s.target)) return
+    flipBefore = snapshotRects(s.active.type, [
+      s.active.containerId,
+      s.target.containerId,
+      target.containerId,
+    ])
     s.target = target
-    flipBefore = snapshotRects(s.active.type)
     setSnapshot({ status: 'dragging', mode: s.mode, active: s.active, target })
     emit({ type: 'move', active: s.active, target })
   }
@@ -346,11 +357,24 @@ export function createDndEngine(initialOptions: DndEngineOptions) {
     finish('escape')
   }
 
-  /** One frame: read layout, compute the target, then write (overlay position, scrolling). */
+  /**
+   * One frame. Scrolling comes first: the target (and the FLIP snapshot taken when it changes)
+   * must be computed against the final scroll position, or a scroll would look like movement.
+   */
   function tick() {
     const s = session
     const p = s?.pointer
     if (!s || !p) return
+
+    for (const element of p.scrollables) {
+      const delta = autoScrollDelta(p.pointer, element.getBoundingClientRect())
+      const x = canScroll(element, 'horizontal') ? delta.x : 0
+      const y = canScroll(element, 'vertical') ? delta.y : 0
+      if (x || y) {
+        element.scrollBy(x, y)
+        s.dirty = true // the scroll event only arrives later
+      }
+    }
 
     if (s.dirty) {
       s.containers = measure(s.active.type)
@@ -364,14 +388,6 @@ export function createDndEngine(initialOptions: DndEngineOptions) {
       p.origin.left + p.pointer.x - p.start.x,
       p.origin.top + p.pointer.y - p.start.y,
     )
-
-    for (const element of p.scrollables) {
-      const delta = autoScrollDelta(p.pointer, element.getBoundingClientRect())
-      const x = canScroll(element, 'horizontal') ? delta.x : 0
-      const y = canScroll(element, 'vertical') ? delta.y : 0
-      if (x || y) element.scrollBy(x, y)
-    }
-
     p.frame = requestAnimationFrame(tick)
   }
 
@@ -443,7 +459,7 @@ export function createDndEngine(initialOptions: DndEngineOptions) {
       if (reason !== 'cancel') suppressNextClick({ untilNextPointerUp: reason === 'escape' })
     }
 
-    flipBefore = snapshotRects(s.active.type)
+    flipBefore = snapshotRects(s.active.type, [s.active.containerId, s.target.containerId])
     if (reason === 'drop') {
       options.onDrop({ active: s.active, target: s.target })
       emit({ type: 'drop', active: s.active, target: s.target })
@@ -457,11 +473,16 @@ export function createDndEngine(initialOptions: DndEngineOptions) {
   // ── After React commits ─────────────────────────────────────────────────────
 
   /**
-   * Called from a layout effect after each render. Order matters: everything that measures or
-   * scrolls to final positions runs first, because FLIP then temporarily moves items back to
-   * where they were (for one frame they *look* like they haven't moved).
+   * Called from a layout effect after each render. The order matters:
+   * 1. Measure FLIP moves first, before anything scrolls: a scroll is not a move.
+   * 2. Keep focus and scroll the item into view (no FLIP transforms are applied yet, so the
+   *    browser sees real positions).
+   * 3. Start the FLIP animations.
    */
   function afterCommit() {
+    const moves = flipBefore ? measureFlip(flipBefore) : []
+    flipBefore = null
+
     if (session) session.dirty = true
     if (session?.mode === 'keyboard') keepFocus(session.active.id, { scroll: true })
 
@@ -478,10 +499,7 @@ export function createDndEngine(initialOptions: DndEngineOptions) {
       landed = element && toRect(element.getBoundingClientRect())
     }
 
-    if (flipBefore) {
-      runFlip(flipBefore)
-      flipBefore = null
-    }
+    playFlip(moves)
 
     if (done) {
       const settle = done.overlay ? done.overlay.settleTo(landed) : Promise.resolve()
@@ -510,17 +528,30 @@ export function createDndEngine(initialOptions: DndEngineOptions) {
     if (scroll) element.scrollIntoView({ block: 'nearest', inline: 'nearest' })
   }
 
-  /** FLIP: First (rects before), Last (rects now), Invert (translate back), Play (animate to 0). */
-  function runFlip(before: Map<string, Rect>) {
-    if (prefersReducedMotion()) return
-    for (const [id, first] of before) {
+  /**
+   * FLIP: First (rects before the change), Last (rects now), Invert (translate back), Play.
+   * This part measures. It does all writes (cancelling running animations), then all reads,
+   * so the browser lays out once instead of once per item (layout thrashing).
+   */
+  function measureFlip(before: Map<string, Rect>) {
+    if (prefersReducedMotion()) return []
+    const elements = [...before].flatMap(([id, first]) => {
       const element = items.get(id)?.element
-      if (!element) continue
-      flipAnimations.get(element)?.cancel()
+      return element ? [{ element, first }] : []
+    })
+    for (const { element } of elements) flipAnimations.get(element)?.cancel()
+
+    return elements.flatMap(({ element, first }) => {
       const last = element.getBoundingClientRect()
       const dx = first.left - last.left
       const dy = first.top - last.top
-      if (Math.abs(dx) < 1 && Math.abs(dy) < 1) continue
+      return Math.abs(dx) < 1 && Math.abs(dy) < 1 ? [] : [{ element, dx, dy }]
+    })
+  }
+
+  /** FLIP, the playing part: only writes. */
+  function playFlip(moves: { element: HTMLElement; dx: number; dy: number }[]) {
+    for (const { element, dx, dy } of moves) {
       flipAnimations.set(
         element,
         element.animate(

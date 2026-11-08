@@ -1,8 +1,7 @@
-import { useReducer, type ReactNode } from 'react'
-import { createHistory } from '@/shared/lib/history'
-import { boardHistoryReducer, type BoardHistory } from '../model/history'
+import { useState, type ReactNode } from 'react'
 import type { BoardState } from '../model/types'
-import { BoardDispatchContext, BoardHistoryContext, BoardStateContext } from './context'
+import { createBoardStore } from './boardStore'
+import { BoardStateSourceContext, BoardStoreContext } from './context'
 
 interface BoardProviderProps {
   initialState: BoardState
@@ -10,15 +9,13 @@ interface BoardProviderProps {
 }
 
 export function BoardProvider({ initialState, children }: BoardProviderProps) {
-  const [history, dispatch] = useReducer(boardHistoryReducer, initialState, (state): BoardHistory =>
-    createHistory(state),
-  )
+  // Created once. The context value never changes, so the provider never re-renders anyone:
+  // components re-render only through their own store subscriptions.
+  const [store] = useState(() => createBoardStore(initialState))
 
   return (
-    <BoardDispatchContext value={dispatch}>
-      <BoardHistoryContext value={history}>
-        <BoardStateContext value={history.present}>{children}</BoardStateContext>
-      </BoardHistoryContext>
-    </BoardDispatchContext>
+    <BoardStoreContext value={store}>
+      <BoardStateSourceContext value={store}>{children}</BoardStateSourceContext>
+    </BoardStoreContext>
   )
 }
