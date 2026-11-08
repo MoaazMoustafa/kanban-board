@@ -17,19 +17,24 @@ export interface History<S, A> {
   readonly future: readonly HistoryEntry<S, A>[]
 }
 
-export type HistoryAction = { type: 'history/undo' } | { type: 'history/redo' }
+export type HistoryAction<S> =
+  | { type: 'history/undo' }
+  | { type: 'history/redo' }
+  /** Replace the present from outside (e.g. a save from another tab) and forget history. */
+  | { type: 'history/reset'; state: S }
 
 export const historyActions = {
-  undo: (): HistoryAction => ({ type: 'history/undo' }),
-  redo: (): HistoryAction => ({ type: 'history/redo' }),
+  undo: (): HistoryAction<never> => ({ type: 'history/undo' }),
+  redo: (): HistoryAction<never> => ({ type: 'history/redo' }),
+  reset: <S>(state: S): HistoryAction<S> => ({ type: 'history/reset', state }),
 }
 
 export function createHistory<S, A>(present: S): History<S, A> {
   return { past: [], present, future: [] }
 }
 
-const isHistoryAction = (action: { type: string }): action is HistoryAction =>
-  action.type === 'history/undo' || action.type === 'history/redo'
+const isHistoryAction = <S>(action: { type: string }): action is HistoryAction<S> =>
+  action.type.startsWith('history/')
 
 /**
  * Higher-order reducer: wraps `reducer` so its state gains undo/redo.
@@ -42,10 +47,15 @@ export function withHistory<S, A extends { type: string }>(
   reducer: (state: S, action: A) => S,
   { limit = 100 }: { limit?: number } = {},
 ) {
-  return function historyReducer(history: History<S, A>, action: A | HistoryAction): History<S, A> {
+  return function historyReducer(
+    history: History<S, A>,
+    action: A | HistoryAction<S>,
+  ): History<S, A> {
     const { past, present, future } = history
 
-    if (isHistoryAction(action)) {
+    if (isHistoryAction<S>(action)) {
+      // Old snapshots would bring back a board the outside world has moved past, so they go.
+      if (action.type === 'history/reset') return createHistory(action.state)
       if (action.type === 'history/undo') {
         const previous = past.at(-1)
         if (!previous) return history

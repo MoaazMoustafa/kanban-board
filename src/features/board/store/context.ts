@@ -4,7 +4,7 @@ import type { BoardAction } from '../model/actions'
 import type { BoardHistory } from '../model/history'
 import type { BoardState } from '../model/types'
 
-export type BoardDispatch = Dispatch<BoardAction | HistoryAction>
+export type BoardDispatch = Dispatch<BoardAction | HistoryAction<BoardState>>
 
 /*
  * State and dispatch live in separate contexts. `dispatch` never changes, so components that

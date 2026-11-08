@@ -19,6 +19,12 @@
   letter-spacing: -0.01em;
 }
 
+.actions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+
 .main {
   min-height: 0;
 }

@@ -5,7 +5,13 @@ export { createSeedBoard } from './model/seed'
 export * from './model/selectors'
 export type { BoardState, Card, CardId, Column, ColumnId } from './model/types'
 
+export { createLocalStorageRepository } from './persistence/localStorageRepository'
+export { ConflictError, NetworkError, RejectedError } from './persistence/errors'
+export type { BoardRepository, BoardSnapshot } from './persistence/repository'
+export { withNetwork, type NetworkOptions } from './persistence/withNetwork'
+
 export { Board } from './components/Board/Board'
+export { BoardRoot } from './components/BoardRoot/BoardRoot'
 export { HistoryControls } from './components/HistoryControls/HistoryControls'
 export { BoardDndProvider } from './store/BoardDndProvider'
 export { BoardProvider } from './store/BoardProvider'

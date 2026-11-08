@@ -73,6 +73,7 @@ test('renaming a column with Enter does not reopen the editor', async ({ page })
 
 test('the board scrolls, not the page', async ({ page }) => {
   await page.setViewportSize({ width: 700, height: 600 })
+  await expect(page.getByRole('region', { name: 'To do' })).toBeVisible()
   const overflow = await page.evaluate(
     () => document.documentElement.scrollWidth - document.documentElement.clientWidth,
   )

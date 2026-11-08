@@ -60,3 +60,17 @@ export const RedoIcon = (props: IconProps) => (
     <path d="M20 9H9.5a5.5 5.5 0 0 0 0 11H13" />
   </Icon>
 )
+
+export const CheckIcon = (props: IconProps) => (
+  <Icon {...props}>
+    <path d="M20 6 9 17l-5-5" />
+  </Icon>
+)
+
+export const CloudOffIcon = (props: IconProps) => (
+  <Icon {...props}>
+    <path d="m2 2 20 20" />
+    <path d="M5.8 5.8A7 7 0 0 0 4 11a4.5 4.5 0 0 0 1.5 8.7H17" />
+    <path d="M9.2 4.2A7 7 0 0 1 18 9h.5a4.5 4.5 0 0 1 3.4 7.5" />
+  </Icon>
+)

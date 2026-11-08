@@ -14,6 +14,11 @@
   height: 100%;
 }
 
+.empty {
+  margin-bottom: var(--space-3);
+  color: var(--color-text-muted);
+}
+
 .addColumnSlot {
   flex: 0 0 var(--column-width);
 }

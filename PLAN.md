@@ -214,13 +214,38 @@ complex Ui/
 
 ### Phase 6: Persistence and optimistic updates
 
-- [ ] 6.1 The `BoardRepository` interface
-- [ ] 6.2 `localStorageRepository` with a debounced save, a versioned `zod` schema, migrations, and a safe fallback for corrupt data
-- [ ] 6.3 `fakeApiRepository` with configurable latency and failure rate
-- [ ] 6.4 Optimistic updates: apply locally, sync, roll back and show a toast on failure
-- [ ] 6.5 Loading, error and empty states
-- [ ] 6.6 Sync across tabs with the `storage` event or `BroadcastChannel`
-- [ ] 6.7 (Advanced) Fractional indexing for order keys. Discuss why servers prefer it to arrays.
+- [x] 6.1 The `BoardRepository` interface
+- [x] 6.2 `localStorageRepository` with a debounced save, a versioned `zod` schema, migrations, and a safe fallback for corrupt data
+- [x] 6.3 `fakeApiRepository` with configurable latency and failure rate
+- [x] 6.4 Optimistic updates: apply locally, sync, roll back and show a toast on failure
+- [x] 6.5 Loading, error and empty states
+- [x] 6.6 Sync across tabs with the `storage` event or `BroadcastChannel`
+- [x] 6.7 (discussed below, not implemented) (Advanced) Fractional indexing for order keys. Discuss why servers prefer it to arrays.
+
+**Decisions made:**
+
+- **The whole board is synced as one document, with revision numbers (optimistic concurrency).** Changes apply locally at once. Saves are debounced, and only one is in flight at a time; changes made meanwhile go into the next save. Responses therefore can't arrive out of order.
+- **Failures are handled by kind.**
+  - Network errors keep the user's work and retry with backoff. Retry happens at once when the browser comes back `online`, or with the "Retry now" button.
+  - A server _rejection_ rolls back to the last confirmed board.
+  - A _conflict_ (another tab saved first) takes the stored version.
+  - Rollbacks and conflicts show a toast and reset undo history, so undo can't bring back what the server refused.
+- **Cross-tab sync uses the `storage` event**, which fires only in other tabs. Incoming boards are applied unless there are unsaved local changes; then the next save conflicts and that resolves it.
+- **`withNetwork` is a decorator** around any repository: latency, a failure rate, a reject rate, and it fails while `navigator.onLine` is false. You enable it with `?api=fake&latency=800&fail=0.3&reject=0.1`.
+- **Loading uses Suspense and `use(promise)`, plus an error boundary with a retry.** Unreadable or newer-version data is backed up to `kanban:board:unreadable:<time>` and never overwritten silently.
+- **The zod schema checks integrity, not just shape.** Every card is in exactly one column, and `columnOrder` matches `columns`.
+- **Test lessons:**
+  - In React's `act` environment, a `use()` promise must resolve _inside_ `act()`.
+  - Suspense waits about 300ms before revealing content once a fallback has shown.
+  - jsdom's accessibility library wrongly treats a `<header>` inside a `<section>` as a banner.
+
+**6.7 Fractional indexing (discussion).** We store order as arrays (`cardIds`) and sync the whole document, so a move rewrites the array and conflicts are detected per document. A server that syncs _individual operations_ (Trello, Linear, Figma) prefers giving each card a sortable string key, such as `"a0"`, `"a0V"` or `"a1"`, generated _between_ its neighbours. Then:
+
+- a move changes one field on one record instead of rewriting a list;
+- two people inserting at different places never touch the same data;
+- the server can sort with a simple `ORDER BY`.
+
+The costs: keys can grow with repeated inserts in the same gap (fixed by occasional rebalancing), and two clients picking the same key need a tie-breaker (append a client ID). It's worth adopting only when we move from document sync to operation sync.
 
 **Learn:** the repository pattern, schema validation, optimistic UI, race conditions.
 

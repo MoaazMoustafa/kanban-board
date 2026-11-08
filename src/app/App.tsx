@@ -1,19 +1,13 @@
-import { Board, HistoryControls } from '@/features/board'
-import styles from './App.module.css'
-import { AppProviders } from './providers'
+import { BoardRoot, type BoardRepository } from '@/features/board'
+import { ToastProvider } from '@/shared/ui/Toast'
+import { createAppRepository } from './repository'
 
-export function App() {
+const defaultRepository = createAppRepository(window.location.search)
+
+export function App({ repository = defaultRepository }: { repository?: BoardRepository }) {
   return (
-    <AppProviders>
-      <div className={styles.app}>
-        <header className={styles.header}>
-          <h1 className={styles.title}>Kanban</h1>
-          <HistoryControls />
-        </header>
-        <main className={styles.main}>
-          <Board />
-        </main>
-      </div>
-    </AppProviders>
+    <ToastProvider>
+      <BoardRoot repository={repository} />
+    </ToastProvider>
   )
 }

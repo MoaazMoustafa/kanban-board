@@ -47,6 +47,11 @@ describe('withHistory', () => {
     expect(history.past.map((entry) => entry.state)).toEqual([2, 3, 4])
   })
 
+  it('reset replaces the present and forgets history', () => {
+    const history = reducer(run(add(1), add(2), historyActions.undo()), historyActions.reset(42))
+    expect(history).toEqual({ past: [], present: 42, future: [] })
+  })
+
   it('returns the same object when there is nothing to undo or redo', () => {
     const history: History<number, Action> = createHistory(0)
     expect(reducer(history, historyActions.undo())).toBe(history)

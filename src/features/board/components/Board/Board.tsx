@@ -22,6 +22,9 @@ export function Board() {
 
   return (
     <div className={styles.board}>
+      {columnOrder.length === 0 && (
+        <p className={styles.empty}>This board has no columns yet. Add one to get started.</p>
+      )}
       <ol ref={containerRef} className={styles.columns} aria-label="Columns">
         {columnOrder.map((columnId) => (
           <ColumnItem key={columnId} columnId={columnId} onOpenCard={setOpenCardId} />
