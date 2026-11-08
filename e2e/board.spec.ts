@@ -1,4 +1,5 @@
 import { expect, test } from '@playwright/test'
+import { cardTitle } from './helpers.ts'
 
 test.beforeEach(async ({ page }) => {
   await page.goto('/')
@@ -57,8 +58,8 @@ test('adds a card from the keyboard', async ({ page }) => {
 
   const review = page.getByRole('region', { name: 'Review' })
   await expect(review.getByRole('listitem')).toHaveText([
-    'Accessible card dialog',
-    'Keyboard-only card',
+    cardTitle('Accessible card dialog'),
+    cardTitle('Keyboard-only card'),
   ])
 })
 

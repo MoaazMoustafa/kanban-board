@@ -1,10 +1,12 @@
 import { useState, type ReactNode } from 'react'
 import { useDragStore, type DragSnapshot, type DragStore } from '@/features/dnd'
-import { dragToAction } from '../model/drag'
+import { dragToAction, resolveFilteredDrag } from '../model/drag'
+import type { CardFilter } from '../model/filter'
 import { boardReducer } from '../model/reducer'
 import type { BoardState } from '../model/types'
 import type { BoardStateSource } from './boardStore'
 import { BoardStateSourceContext } from './context'
+import { useFilterStore, type FilterStore } from './filterStore'
 import { useBoardStore } from './hooks'
 
 /**
@@ -12,27 +14,42 @@ import { useBoardStore } from './hooks'
  * the real reducer applied to the real state, without dispatching. Recomputed only when the
  * board or the drag changes, and cached so subscribers get the same object until then.
  */
-function createPreviewSource(base: BoardStateSource, drag: DragStore): BoardStateSource {
-  let cache: { state: BoardState; snapshot: DragSnapshot; preview: BoardState } | undefined
+function createPreviewSource(
+  base: BoardStateSource,
+  drag: DragStore,
+  filters: FilterStore,
+): BoardStateSource {
+  let cache:
+    | { state: BoardState; snapshot: DragSnapshot; filter: CardFilter; preview: BoardState }
+    | undefined
 
   return {
     getState() {
       const state = base.getState()
       const snapshot = drag.getSnapshot()
-      if (cache?.state === state && cache.snapshot === snapshot) return cache.preview
+      const filter = filters.get()
+      if (cache?.state === state && cache.snapshot === snapshot && cache.filter === filter) {
+        return cache.preview
+      }
 
       const { status, active, target } = snapshot
-      const action = status === 'dragging' && active && target && dragToAction({ active, target })
+      const action =
+        status === 'dragging' &&
+        active &&
+        target &&
+        dragToAction(resolveFilteredDrag({ active, target }, state, filter))
       const preview = action ? boardReducer(state, action) : state
-      cache = { state, snapshot, preview }
+      cache = { state, snapshot, filter, preview }
       return preview
     },
     subscribe(listener) {
       const unsubscribeBase = base.subscribe(listener)
       const unsubscribeDrag = drag.subscribe(listener)
+      const unsubscribeFilter = filters.subscribe(listener)
       return () => {
         unsubscribeBase()
         unsubscribeDrag()
+        unsubscribeFilter()
       }
     },
   }
@@ -45,7 +62,8 @@ function createPreviewSource(base: BoardStateSource, drag: DragStore): BoardStat
 export function BoardDragPreview({ children }: { children: ReactNode }) {
   const store = useBoardStore()
   const drag = useDragStore()
-  const [source] = useState(() => createPreviewSource(store, drag))
+  const filters = useFilterStore()
+  const [source] = useState(() => createPreviewSource(store, drag, filters))
 
   return <BoardStateSourceContext value={source}>{children}</BoardStateSourceContext>
 }

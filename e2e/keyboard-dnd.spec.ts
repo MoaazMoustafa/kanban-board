@@ -1,4 +1,5 @@
 import { expect, test, type Page } from '@playwright/test'
+import { cardTitle } from './helpers.ts'
 
 const column = (page: Page, name: string) => page.getByRole('region', { name, exact: true })
 const cardsIn = (page: Page, name: string) =>
@@ -28,8 +29,8 @@ test('moves a card across columns with the keyboard and keeps focus on it', asyn
 
   await page.keyboard.press('Space')
   await expect(cardsIn(page, 'Review')).toHaveText([
-    'Accessible card dialog',
-    'Design the empty state',
+    cardTitle('Accessible card dialog'),
+    cardTitle('Design the empty state'),
   ])
   await expect(card(page, 'Design the empty state')).toBeFocused()
   await expect(page.getByRole('dialog', { name: 'Edit card' })).toBeHidden()
@@ -41,7 +42,7 @@ test('dropping with Enter does not open the card', async ({ page }) => {
   await page.keyboard.press('ArrowUp')
   await page.keyboard.press('Enter')
 
-  await expect(cardsIn(page, 'To do').nth(1)).toHaveText('Pick an icon set')
+  await expect(cardsIn(page, 'To do').nth(1)).toHaveText(cardTitle('Pick an icon set'))
   await expect(page.getByRole('dialog', { name: 'Edit card' })).toBeHidden()
 })
 
@@ -51,7 +52,7 @@ test('Escape cancels and Enter still opens the card afterwards', async ({ page }
   await page.keyboard.press('ArrowRight')
   await page.keyboard.press('Escape')
 
-  await expect(cardsIn(page, 'To do').last()).toHaveText('Pick an icon set')
+  await expect(cardsIn(page, 'To do').last()).toHaveText(cardTitle('Pick an icon set'))
   await expect(card(page, 'Pick an icon set')).toBeFocused()
 
   await page.keyboard.press('Enter')
@@ -83,6 +84,6 @@ test('scrolls a card that is moved off-screen back into view', async ({ page }) 
   for (let i = 0; i < 3; i++) await page.keyboard.press('ArrowRight')
   await page.keyboard.press('Space')
 
-  await expect(cardsIn(page, 'Done').first()).toHaveText('Design the empty state')
+  await expect(cardsIn(page, 'Done').first()).toHaveText(cardTitle('Design the empty state'))
   await expect(card(page, 'Design the empty state')).toBeInViewport()
 })

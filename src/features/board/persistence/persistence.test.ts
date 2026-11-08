@@ -52,6 +52,17 @@ describe('migrate', () => {
     expect(Object.values(snapshot.board.cards)[0]).toMatchObject({ createdAt: 0 })
   })
 
+  it('upgrades version 2 (cards without labels)', () => {
+    const cardsWithoutLabels = Object.fromEntries(
+      Object.values(board.cards).map(({ labels: _labels, ...card }) => [card.id, card]),
+    )
+    const v2 = { version: 2, revision: 4, board: { ...board, cards: cardsWithoutLabels } }
+
+    const snapshot = parseStoredBoard(JSON.stringify(v2))
+    expect(snapshot.revision).toBe(4)
+    expect(snapshot.board).toEqual(board) // every card gained `labels: []`
+  })
+
   it('leaves current data alone', () => {
     const current = toStored(board, 1)
     expect(migrate(current)).toBe(current)

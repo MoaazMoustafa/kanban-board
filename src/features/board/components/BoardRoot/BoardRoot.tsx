@@ -7,6 +7,7 @@ import { VisuallyHidden } from '@/shared/ui/VisuallyHidden'
 import { loadBoard, type LoadedBoard } from '../../persistence/loadBoard'
 import type { BoardRepository } from '../../persistence/repository'
 import { BoardDndProvider } from '../../store/BoardDndProvider'
+import { BoardFilterProvider } from '../../store/BoardFilterProvider'
 import { BoardProvider } from '../../store/BoardProvider'
 import { BoardSyncProvider } from '../../store/BoardSyncProvider'
 import { Board } from '../Board/Board'
@@ -82,18 +83,20 @@ function LoadedBoardView({
   return (
     <BoardProvider initialState={snapshot.board}>
       <BoardSyncProvider repository={repository} initial={snapshot}>
-        <BoardDndProvider>
-          <AppShell
-            actions={
-              <>
-                <SaveStatus />
-                <HistoryControls />
-              </>
-            }
-          >
-            <Board />
-          </AppShell>
-        </BoardDndProvider>
+        <BoardFilterProvider>
+          <BoardDndProvider>
+            <AppShell
+              actions={
+                <>
+                  <SaveStatus />
+                  <HistoryControls />
+                </>
+              }
+            >
+              <Board />
+            </AppShell>
+          </BoardDndProvider>
+        </BoardFilterProvider>
       </BoardSyncProvider>
     </BoardProvider>
   )

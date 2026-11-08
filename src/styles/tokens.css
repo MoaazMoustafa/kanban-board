@@ -23,6 +23,14 @@
   --color-focus: #4f46e5;
   --color-backdrop: rgb(15 17 21 / 45%);
 
+  /* Label swatches (decorative: every label is also shown as text) */
+  --label-bug: #e5484d;
+  --label-feature: #3e63dd;
+  --label-design: #8e4ec6;
+  --label-research: #12a594;
+  --label-urgent: #f76b15;
+  --label-chore: #8b8d98;
+
   /* Typography */
   --font-sans: system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
   --font-size-xs: 0.75rem;

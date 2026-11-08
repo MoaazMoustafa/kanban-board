@@ -1,7 +1,8 @@
 import { createCardId, createColumnId } from './ids'
+import type { LabelId } from './labels'
 import type { Card, CardId, ColumnId } from './types'
 
-export type CardChanges = Partial<Pick<Card, 'title' | 'description'>>
+export type CardChanges = Partial<Pick<Card, 'title' | 'description' | 'labels'>>
 
 /** Every way the board can change. The `type` field discriminates the union. */
 export type BoardAction =
@@ -28,6 +29,7 @@ export const boardActions = {
     columnId: ColumnId
     title: string
     description?: string
+    labels?: LabelId[]
     index?: number
     id?: CardId
     createdAt?: number
@@ -40,6 +42,7 @@ export const boardActions = {
         id: input.id ?? createCardId(),
         title: input.title,
         description: input.description ?? '',
+        labels: input.labels ?? [],
         createdAt: input.createdAt ?? Date.now(),
       },
     },

@@ -1,4 +1,5 @@
 import { expect, test, type Locator, type Page } from '@playwright/test'
+import { cardTitle } from './helpers.ts'
 
 /** Press on `source`, move in small steps (like a real hand) to `to`, optionally release. */
 async function drag(page: Page, source: Locator, to: { x: number; y: number }, release = true) {
@@ -38,9 +39,9 @@ test('reorders a card within its column', async ({ page }) => {
   )
 
   await expect(cardsIn(page, 'To do')).toHaveText([
-    'Write keyboard shortcuts doc',
-    'Pick an icon set',
-    'Design the empty state',
+    cardTitle('Write keyboard shortcuts doc'),
+    cardTitle('Pick an icon set'),
+    cardTitle('Design the empty state'),
   ])
 })
 
@@ -52,9 +53,9 @@ test('moves a card to another column', async ({ page }) => {
   )
 
   await expect(cardsIn(page, 'Done')).toHaveText([
-    'Design the empty state',
-    'Scaffold the project',
-    'Normalized board model',
+    cardTitle('Design the empty state'),
+    cardTitle('Scaffold the project'),
+    cardTitle('Normalized board model'),
   ])
   await expect(cardsIn(page, 'To do')).toHaveCount(2)
 })
@@ -68,7 +69,7 @@ test('drops a card into an empty column', async ({ page }) => {
 
   await drag(page, card(page, 'Accessible card dialog'), await pointIn(emptyList))
 
-  await expect(cardsIn(page, 'Empty')).toHaveText(['Accessible card dialog'])
+  await expect(cardsIn(page, 'Empty')).toHaveText([cardTitle('Accessible card dialog')])
   await expect(cardsIn(page, 'Review')).toHaveCount(0)
 })
 
@@ -87,8 +88,8 @@ test('shows a live preview while dragging and commits only on drop', async ({ pa
   await page.mouse.up()
   await expect(page.locator('[data-dnd-overlay]')).toHaveCount(0)
   await expect(cardsIn(page, 'Review')).toHaveText([
-    'Accessible card dialog',
-    'Design the empty state',
+    cardTitle('Accessible card dialog'),
+    cardTitle('Design the empty state'),
   ])
 })
 
@@ -98,9 +99,9 @@ test('Escape cancels the drag and the release does not open the card', async ({ 
   await page.mouse.up()
 
   await expect(cardsIn(page, 'To do')).toHaveText([
-    'Design the empty state',
-    'Write keyboard shortcuts doc',
-    'Pick an icon set',
+    cardTitle('Design the empty state'),
+    cardTitle('Write keyboard shortcuts doc'),
+    cardTitle('Pick an icon set'),
   ])
   await expect(page.getByRole('dialog', { name: 'Edit card' })).toBeHidden()
 })
@@ -112,7 +113,7 @@ test('dropping does not open the card dialog', async ({ page }) => {
     await pointIn(card(page, 'Design the empty state'), 'top'),
   )
 
-  await expect(cardsIn(page, 'To do').first()).toHaveText('Pick an icon set')
+  await expect(cardsIn(page, 'To do').first()).toHaveText(cardTitle('Pick an icon set'))
   await expect(page.getByRole('dialog', { name: 'Edit card' })).toBeHidden()
 })
 
@@ -152,6 +153,6 @@ test.describe('with reduced motion', () => {
     await drag(page, card(page, 'Pick an icon set'), await pointIn(column(page, 'Done'), 'bottom'))
 
     await expect(page.locator('[data-dnd-overlay]')).toHaveCount(0)
-    await expect(cardsIn(page, 'Done').last()).toHaveText('Pick an icon set')
+    await expect(cardsIn(page, 'Done').last()).toHaveText(cardTitle('Pick an icon set'))
   })
 })

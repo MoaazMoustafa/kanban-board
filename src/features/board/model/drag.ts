@@ -1,4 +1,5 @@
 import { boardActions, type BoardAction } from './actions'
+import { toFullDropIndexIn, type CardFilter } from './filter'
 import type { BoardState, CardId, ColumnId } from './types'
 
 /** Drag types and the container that holds the columns. Board-specific names for the generic engine. */
@@ -28,6 +29,26 @@ export function dragToAction({ active, target }: Drag): BoardAction | null {
     default:
       return null
   }
+}
+
+/**
+ * While filtering, the engine's drop index counts only visible cards; this rewrites it as an
+ * index in the full column, so the card lands exactly where it was shown.
+ */
+export function resolveFilteredDrag<T extends Drag>(
+  drag: T,
+  state: BoardState,
+  filter: CardFilter,
+): T {
+  if (drag.active.type !== DRAG_TYPE.card) return drag
+  const index = toFullDropIndexIn(
+    state,
+    drag.target.containerId as ColumnId,
+    drag.active.id as CardId,
+    drag.target.index,
+    filter,
+  )
+  return index === drag.target.index ? drag : { ...drag, target: { ...drag.target, index } }
 }
 
 interface DragDescriptionEvent {

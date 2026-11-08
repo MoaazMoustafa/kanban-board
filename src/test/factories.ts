@@ -4,7 +4,14 @@ export const cardId = (id: string) => id as CardId
 export const columnId = (id: string) => id as ColumnId
 
 export function makeCard(id: string, overrides: Partial<Omit<Card, 'id'>> = {}): Card {
-  return { id: cardId(id), title: `Card ${id}`, description: '', createdAt: 0, ...overrides }
+  return {
+    id: cardId(id),
+    title: `Card ${id}`,
+    description: '',
+    labels: [],
+    createdAt: 0,
+    ...overrides,
+  }
 }
 
 /**

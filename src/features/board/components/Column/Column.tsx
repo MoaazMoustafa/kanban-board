@@ -8,6 +8,7 @@ import { VisuallyHidden } from '@/shared/ui/VisuallyHidden'
 import { DRAG_TYPE } from '../../model/drag'
 import { selectColumn } from '../../model/selectors'
 import type { CardId, ColumnId } from '../../model/types'
+import { useVisibleCardIds } from '../../store/filterStore'
 import { useBoardActions, useBoardSelector } from '../../store/hooks'
 import { AddCardForm } from '../AddCardForm/AddCardForm'
 import { CardItem } from '../Card/CardItem'
@@ -50,8 +51,11 @@ export function Column({ columnId, onOpenCard, dragHandleProps, dragDescribedBy 
     [containerRef],
   )
 
+  const visibleCardIds = useVisibleCardIds(column)
+
   if (!column) return null
   const count = column.cardIds.length
+  const filtered = visibleCardIds.length !== count
 
   function requestDelete() {
     // Deleting an empty column loses nothing, so only ask when cards would go with it.
@@ -76,8 +80,10 @@ export function Column({ columnId, onOpenCard, dragHandleProps, dragDescribedBy 
           />
         </h2>
         <span className={styles.count}>
-          {count}
-          <VisuallyHidden> {count === 1 ? 'card' : 'cards'}</VisuallyHidden>
+          {filtered ? `${visibleCardIds.length}/${count}` : count}
+          <VisuallyHidden>
+            {filtered ? ` of ${count} cards shown` : ` ${count === 1 ? 'card' : 'cards'}`}
+          </VisuallyHidden>
         </span>
         <IconButton
           label={`Delete column ${column.title}`}
@@ -89,10 +95,13 @@ export function Column({ columnId, onOpenCard, dragHandleProps, dragDescribedBy 
       </header>
 
       <ol ref={setListRef} className={styles.cards} aria-labelledby={headingId}>
-        {column.cardIds.map((cardId) => (
+        {visibleCardIds.map((cardId) => (
           <CardItem key={cardId} cardId={cardId} columnId={columnId} onOpen={onOpenCard} />
         ))}
       </ol>
+      {filtered && visibleCardIds.length === 0 && (
+        <p className={styles.noMatch}>No matching cards</p>
+      )}
 
       <footer className={styles.footer}>
         <AddCardForm

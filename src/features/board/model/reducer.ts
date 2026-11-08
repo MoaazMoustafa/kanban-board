@@ -2,6 +2,7 @@ import { assertNever } from '@/shared/lib/assert'
 import { arrayMove, insertAt, removeAt } from '@/shared/lib/array'
 import { omitKeys } from '@/shared/lib/object'
 import type { BoardAction } from './actions'
+import { normalizeLabels } from './labels'
 import { findColumnIdOfCard } from './selectors'
 import type { BoardState, Column } from './types'
 
@@ -50,7 +51,7 @@ function addCard(state: BoardState, { card, columnId, index }: Payload<'card/add
 
   return {
     ...state,
-    cards: { ...state.cards, [card.id]: { ...card, title } },
+    cards: { ...state.cards, [card.id]: { ...card, title, labels: normalizeLabels(card.labels) } },
     columns: {
       ...state.columns,
       [columnId]: {
@@ -67,10 +68,20 @@ function updateCard(state: BoardState, { cardId, changes }: Payload<'card/update
 
   const title = changes.title?.trim() ?? card.title
   const description = changes.description ?? card.description
+  const labels = changes.labels ? normalizeLabels(changes.labels) : card.labels
   if (!title) return state
-  if (title === card.title && description === card.description) return state
+  const sameLabels =
+    labels.length === card.labels.length && labels.every((l, i) => l === card.labels[i])
+  if (title === card.title && description === card.description && sameLabels) return state
 
-  return { ...state, cards: { ...state.cards, [cardId]: { ...card, title, description } } }
+  return {
+    ...state,
+    cards: {
+      ...state.cards,
+      // Keep the old array when unchanged, so selectors on labels don't see a "new" value.
+      [cardId]: { ...card, title, description, labels: sameLabels ? card.labels : labels },
+    },
+  }
 }
 
 function deleteCard(state: BoardState, { cardId }: Payload<'card/deleted'>): BoardState {

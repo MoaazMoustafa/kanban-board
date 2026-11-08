@@ -22,6 +22,12 @@
   box-shadow: var(--shadow-card-hover);
 }
 
+.labels {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-1);
+}
+
 .title {
   font-size: var(--font-size-sm);
   white-space: pre-wrap;

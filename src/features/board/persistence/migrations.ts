@@ -6,6 +6,7 @@ import { CURRENT_VERSION } from './schema'
  * data is only validated once it reaches the current version.
  *
  * Version 1 (an early prototype format) had no revision counter and no card timestamps.
+ * Version 2 had no card labels.
  */
 const migrations: Record<number, (data: Record<string, unknown>) => Record<string, unknown>> = {
   1: (data) => {
@@ -15,6 +16,20 @@ const migrations: Record<number, (data: Record<string, unknown>) => Record<strin
     )
     return { ...data, version: 2, revision: 0, board: { ...board, cards } }
   },
+  2: (data) => mapCards(data, 3, (card) => ({ labels: [], ...card })),
+}
+
+/** Applies `update` to every stored card and sets the new version. */
+function mapCards(
+  data: Record<string, unknown>,
+  version: number,
+  update: (card: Record<string, unknown>) => Record<string, unknown>,
+) {
+  const board = data['board'] as { cards?: Record<string, Record<string, unknown>> } | undefined
+  const cards = Object.fromEntries(
+    Object.entries(board?.cards ?? {}).map(([id, card]) => [id, update(card)]),
+  )
+  return { ...data, version, board: { ...board, cards } }
 }
 
 export class UnsupportedVersionError extends Error {

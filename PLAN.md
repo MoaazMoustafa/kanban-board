@@ -297,11 +297,25 @@ At 20 × 50 = 1,000 cards, every interaction is one to two frames (7–23ms), an
 
 ### Phase 8: Polish and retrospective
 
-- [ ] 8.1 Filtering/search and labels on cards
-- [ ] 8.2 Responsive/touch pass (long-press to drag on mobile)
-- [ ] 8.3 Swap in `dnd-kit` on a branch and compare its API and design with ours
-- [ ] 8.4 Final a11y audit (axe in Playwright) and Lighthouse
-- [ ] 8.5 Write up what you learned
+- [x] 8.1 Filtering/search and labels on cards
+- [x] 8.2 Responsive/touch pass (long-press to drag on mobile)
+- [ ] ~~8.3 Swap in `dnd-kit` on a branch and compare~~: **skipped by decision.** Our engine's design already covers what the comparison would teach.
+- [x] 8.4 Final a11y audit (axe in Playwright) and Lighthouse
+- [x] 8.5 Write up what you learned: a draft in `LEARNINGS.md`
+
+**Decisions and findings:**
+
+- **8.1 Labels.** A fixed palette, shown as chips with text. The stored format moved to **v3**, with a real migration (v2 → v3 adds `labels: []`). Labels are announced in the card's description, so its name stays the title.
+- **8.1 Filtering.**
+  - Filtering is UI state in its own store: not saved, not undoable.
+  - The search uses `useDeferredValue`, so typing stays responsive on large boards.
+  - **Dragging while filtered** translates the engine's visible-only index to the full list (`toFullDropIndex`), so cards land where they were shown. Hidden cards keep their order.
+  - Press `/` to focus the filter.
+- **8.2 Touch.** Real touch input via the Chrome DevTools Protocol confirmed that long-press drags work. It also found a real bug: **swiping on a card couldn't scroll the board**, because `overscroll-behavior: contain` on the card list contained both axes. The fix is `overscroll-behavior-y`.
+- **8.4 Audit.**
+  - axe (WCAG 2.2 AA plus best practice) runs on 12 states in both themes. It found one real issue, the count badge contrast. A sanity check first proved the harness _does_ report violations.
+  - Lighthouse on the production build: **100 / 100 / 100 / 100** after adding a meta description and `robots.txt`.
+  - Undo that removes the focused element now moves focus to the Undo button.
 
 ### Phase 9 (stretch)
 

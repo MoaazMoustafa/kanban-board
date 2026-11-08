@@ -1,4 +1,4 @@
-import { useEffect, useEffectEvent, useState } from 'react'
+import { useEffect, useEffectEvent, useRef, useState } from 'react'
 import { useDragState } from '@/features/dnd'
 import { isEditableTarget, matchHistoryShortcut } from '@/shared/lib/shortcuts'
 import { IconButton } from '@/shared/ui/Button'
@@ -22,16 +22,34 @@ export function HistoryControls() {
     setAnnouncement((previous) => (previous === message ? `${message} ` : message))
   }
 
+  const undoButton = useRef<HTMLButtonElement>(null)
+
+  /**
+   * Undo can remove the very element that had focus (e.g. undoing "add card" while that card
+   * is focused). Focus would fall to <body>, and keyboard users would have to start over from
+   * the top of the page; instead it lands on the Undo button, right where they are working.
+   */
+  function keepFocusAfterChange() {
+    requestAnimationFrame(() => {
+      const focused = document.activeElement
+      if (!focused || focused === document.body || !focused.isConnected) {
+        undoButton.current?.focus()
+      }
+    })
+  }
+
   function handleUndo() {
     if (!undoLabel) return
     undo()
     announce(`Undid: ${undoLabel}.`)
+    keepFocusAfterChange()
   }
 
   function handleRedo() {
     if (!redoLabel) return
     redo()
     announce(`Redid: ${redoLabel}.`)
+    keepFocusAfterChange()
   }
 
   // An Effect Event always sees the latest props/state, so the listener never needs re-adding.
@@ -58,6 +76,7 @@ export function HistoryControls() {
       {/* aria-disabled instead of disabled: a disabled button would drop keyboard focus
           the moment the last step is undone. */}
       <IconButton
+        ref={undoButton}
         label="Undo"
         title={undoLabel ? `Undo: ${undoLabel} (${UNDO_KEYS})` : 'Nothing to undo'}
         icon={<UndoIcon />}

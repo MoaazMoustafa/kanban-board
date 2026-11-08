@@ -1,3 +1,5 @@
+import type { LabelId } from './labels'
+
 /**
  * Branded IDs: at runtime they are plain strings, but the type system refuses to mix them up,
  * so passing a ColumnId where a CardId is expected is a compile error.
@@ -9,6 +11,7 @@ export interface Card {
   readonly id: CardId
   readonly title: string
   readonly description: string
+  readonly labels: readonly LabelId[]
   readonly createdAt: number
 }
 

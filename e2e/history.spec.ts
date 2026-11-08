@@ -1,4 +1,5 @@
 import { expect, test, type Page } from '@playwright/test'
+import { cardTitle } from './helpers.ts'
 
 const cardsIn = (page: Page, name: string) =>
   page.getByRole('region', { name, exact: true }).getByRole('list').getByRole('listitem')
@@ -21,13 +22,13 @@ test('undoes and redoes a mouse drag', async ({ page }) => {
   const done = (await page.getByRole('region', { name: 'Done', exact: true }).boundingBox())!
   await startDrag(page, 'Design the empty state', { x: done.x + 50, y: done.y + done.height - 10 })
   await page.mouse.up()
-  await expect(cardsIn(page, 'Done').last()).toHaveText('Design the empty state')
+  await expect(cardsIn(page, 'Done').last()).toHaveText(cardTitle('Design the empty state'))
 
   await page.keyboard.press(`${modifier}+z`)
-  await expect(cardsIn(page, 'To do').first()).toHaveText('Design the empty state')
+  await expect(cardsIn(page, 'To do').first()).toHaveText(cardTitle('Design the empty state'))
 
   await page.getByRole('button', { name: 'Redo' }).click()
-  await expect(cardsIn(page, 'Done').last()).toHaveText('Design the empty state')
+  await expect(cardsIn(page, 'Done').last()).toHaveText(cardTitle('Design the empty state'))
 })
 
 test('ignores Ctrl+Z in the middle of a mouse drag', async ({ page }) => {
@@ -42,8 +43,11 @@ test('ignores Ctrl+Z in the middle of a mouse drag', async ({ page }) => {
   await page.mouse.up()
 
   // The earlier "Extra" card is still there; only the drop happened.
-  await expect(cardsIn(page, 'Review')).toHaveText(['Accessible card dialog', 'Extra'])
-  await expect(cardsIn(page, 'Done').first()).toHaveText('Pick an icon set')
+  await expect(cardsIn(page, 'Review')).toHaveText([
+    cardTitle('Accessible card dialog'),
+    cardTitle('Extra'),
+  ])
+  await expect(cardsIn(page, 'Done').first()).toHaveText(cardTitle('Pick an icon set'))
 })
 
 test('leaves native undo to text fields', async ({ page }) => {

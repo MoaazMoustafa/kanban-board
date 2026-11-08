@@ -1,3 +1,4 @@
+import { LABEL_IDS } from './labels'
 import type { BoardState, Card, CardId, Column, ColumnId } from './types'
 
 const WORDS = (
@@ -50,7 +51,14 @@ export function generateBoard({
     const cardIds: CardId[] = []
     for (let i = 0; i < cardsPerColumn; i++) {
       const id = `card-${c}-${i}` as CardId
-      cards[id] = { id, title: title(), description: next() < 0.33 ? title() : '', createdAt: 0 }
+      const labels = LABEL_IDS.filter(() => next() < 0.15)
+      cards[id] = {
+        id,
+        title: title(),
+        description: next() < 0.33 ? title() : '',
+        labels,
+        createdAt: 0,
+      }
       cardIds.push(id)
     }
     columnTable[columnId] = { id: columnId, title: `Column ${c + 1}`, cardIds }

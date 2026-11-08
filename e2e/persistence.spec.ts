@@ -1,4 +1,5 @@
 import { expect, test, type Page } from '@playwright/test'
+import { cardTitle } from './helpers.ts'
 
 const cardsIn = (page: Page, name: string) =>
   page.getByRole('region', { name, exact: true }).getByRole('list').getByRole('listitem')
@@ -16,7 +17,10 @@ test('keeps the board across reloads', async ({ page }) => {
   await expect(page.getByText('Saved', { exact: true })).toBeVisible()
 
   await page.reload()
-  await expect(cardsIn(page, 'Review')).toHaveText(['Accessible card dialog', 'Survives a reload'])
+  await expect(cardsIn(page, 'Review')).toHaveText([
+    cardTitle('Accessible card dialog'),
+    cardTitle('Survives a reload'),
+  ])
 })
 
 test('shows changes from another tab live', async ({ context }) => {
@@ -26,7 +30,10 @@ test('shows changes from another tab live', async ({ context }) => {
   await second.goto('/')
 
   await addCard(first, 'Review', 'Made in tab one')
-  await expect(cardsIn(second, 'Review')).toHaveText(['Accessible card dialog', 'Made in tab one'])
+  await expect(cardsIn(second, 'Review')).toHaveText([
+    cardTitle('Accessible card dialog'),
+    cardTitle('Made in tab one'),
+  ])
 })
 
 test('a conflict between tabs ends with the latest saved version and a notice', async ({
@@ -43,7 +50,10 @@ test('a conflict between tabs ends with the latest saved version and a notice', 
 
   // The slow tab's save was based on an old revision, so the stored version wins.
   await expect(slow.getByText(/changed in another tab/)).toBeVisible({ timeout: 10_000 })
-  await expect(cardsIn(slow, 'Review')).toHaveText(['Accessible card dialog', 'Fast tab change'])
+  await expect(cardsIn(slow, 'Review')).toHaveText([
+    cardTitle('Accessible card dialog'),
+    cardTitle('Fast tab change'),
+  ])
   await expect(cardsIn(slow, 'Done')).toHaveCount(2)
 })
 
@@ -56,13 +66,19 @@ test.describe('with the fake API', () => {
     await addCard(page, 'Review', 'Written offline')
     await expect(page.getByText(/Not saved/)).toBeVisible()
     await expect(page.getByText(/Your changes are kept/)).toBeVisible()
-    await expect(cardsIn(page, 'Review')).toHaveText(['Accessible card dialog', 'Written offline'])
+    await expect(cardsIn(page, 'Review')).toHaveText([
+      cardTitle('Accessible card dialog'),
+      cardTitle('Written offline'),
+    ])
 
     // The `online` event triggers an immediate retry instead of waiting for the backoff.
     await context.setOffline(false)
     await expect(page.getByText('Saved', { exact: true })).toBeVisible()
     await page.reload()
-    await expect(cardsIn(page, 'Review')).toHaveText(['Accessible card dialog', 'Written offline'])
+    await expect(cardsIn(page, 'Review')).toHaveText([
+      cardTitle('Accessible card dialog'),
+      cardTitle('Written offline'),
+    ])
   })
 
   test('offers a retry when the board fails to load', async ({ page }) => {
@@ -77,6 +93,6 @@ test.describe('with the fake API', () => {
     await expect(
       page.getByText(/Couldn't save your recent changes, so they were undone/),
     ).toBeVisible()
-    await expect(cardsIn(page, 'Review')).toHaveText(['Accessible card dialog'])
+    await expect(cardsIn(page, 'Review')).toHaveText([cardTitle('Accessible card dialog')])
   })
 })

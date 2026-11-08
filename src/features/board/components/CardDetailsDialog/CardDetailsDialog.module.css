@@ -34,6 +34,29 @@
   box-shadow: 0 0 0 3px var(--color-accent-soft);
 }
 
+.labelsField {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  padding: 0;
+  border: 0;
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium);
+}
+
+.labelOptions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.labelOption {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  cursor: pointer;
+}
+
 .actions {
   display: flex;
   flex-wrap: wrap;

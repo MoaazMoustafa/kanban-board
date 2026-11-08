@@ -57,6 +57,21 @@ describe('card/updated', () => {
     expect(next.cards[cardId('a')]?.title).toBe('Card a')
   })
 
+  it('normalizes labels to palette order without duplicates', () => {
+    const next = boardReducer(
+      board,
+      a.updateCard(cardId('a'), { labels: ['urgent', 'bug', 'bug'] }),
+    )
+    expect(next.cards[cardId('a')]?.labels).toEqual(['bug', 'urgent'])
+  })
+
+  it('treats the same labels in another order as no change', () => {
+    const labelled = boardReducer(board, a.updateCard(cardId('a'), { labels: ['bug', 'urgent'] }))
+    expect(boardReducer(labelled, a.updateCard(cardId('a'), { labels: ['urgent', 'bug'] }))).toBe(
+      labelled,
+    )
+  })
+
   it.each([
     ['an unknown card', cardId('nope'), { title: 'T' }],
     ['an empty title', cardId('a'), { title: '  ' }],

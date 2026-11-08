@@ -1,4 +1,4 @@
-import { screen, within } from '@testing-library/react'
+import { screen, waitFor, within } from '@testing-library/react'
 import { describe, expect, it } from 'vitest'
 import { makeBoard } from '@/test/factories'
 import { renderWithProviders } from '@/test/renderWithProviders'
@@ -108,6 +108,16 @@ describe('keyboard shortcuts', () => {
     await user.keyboard('{Control>}z{/Control}')
     expect(cardsIn('To do')).toEqual(['Card a', 'Card b'])
     expect(undoButton()).toHaveAttribute('aria-disabled', 'true')
+  })
+
+  it('move focus to the Undo button when undo removes the focused element', async () => {
+    const { user } = setup()
+    await addCard(user, 'New')
+    screen.getByRole('button', { name: 'New' }).focus()
+
+    await user.keyboard('{Control>}z{/Control}')
+    expect(cardsIn('Done')).toEqual(['Card c'])
+    await waitFor(() => expect(undoButton()).toHaveFocus())
   })
 
   it('are ignored while carrying a card', async () => {

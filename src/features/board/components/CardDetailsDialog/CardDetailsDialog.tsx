@@ -2,9 +2,11 @@ import { useId, useState, type FormEvent } from 'react'
 import { Button } from '@/shared/ui/Button'
 import { Dialog } from '@/shared/ui/Dialog'
 import { TrashIcon } from '@/shared/ui/icons'
+import { LABELS, type LabelId } from '../../model/labels'
 import { findColumnIdOfCard, selectCard } from '../../model/selectors'
 import type { Card, CardId } from '../../model/types'
 import { useBoardActions, useBoardSelector } from '../../store/hooks'
+import { LabelChip } from '../Labels/LabelChip'
 import styles from './CardDetailsDialog.module.css'
 
 interface CardDetailsDialogProps {
@@ -38,12 +40,13 @@ function CardForm({ card, columnTitle, onDone }: CardFormProps) {
   const actions = useBoardActions()
   const [title, setTitle] = useState(card.title)
   const [description, setDescription] = useState(card.description)
+  const [labels, setLabels] = useState<readonly LabelId[]>(card.labels)
   const titleId = useId()
   const descriptionId = useId()
 
   function save(event: FormEvent) {
     event.preventDefault()
-    actions.updateCard(card.id, { title, description })
+    actions.updateCard(card.id, { title, description, labels: [...labels] })
     onDone()
   }
 
@@ -77,6 +80,27 @@ function CardForm({ card, columnTitle, onDone }: CardFormProps) {
           onChange={(event) => setDescription(event.target.value)}
         />
       </div>
+
+      <fieldset className={styles.labelsField}>
+        <legend>Labels</legend>
+        <div className={styles.labelOptions}>
+          {LABELS.map(({ id, name }) => (
+            <label key={id} className={styles.labelOption}>
+              <input
+                type="checkbox"
+                checked={labels.includes(id)}
+                aria-label={name}
+                onChange={(event) =>
+                  setLabels((current) =>
+                    event.target.checked ? [...current, id] : current.filter((l) => l !== id),
+                  )
+                }
+              />
+              <LabelChip id={id} />
+            </label>
+          ))}
+        </div>
+      </fieldset>
 
       <div className={styles.actions}>
         <Button

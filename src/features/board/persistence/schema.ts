@@ -1,13 +1,15 @@
 import { z } from 'zod'
+import { LABEL_IDS } from '../model/labels'
 import type { BoardState } from '../model/types'
 import type { BoardSnapshot } from './repository'
 
-export const CURRENT_VERSION = 2
+export const CURRENT_VERSION = 3
 
 const cardSchema = z.object({
   id: z.string().min(1),
   title: z.string().min(1),
   description: z.string(),
+  labels: z.array(z.enum(LABEL_IDS)),
   createdAt: z.number(),
 })
 

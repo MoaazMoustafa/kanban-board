@@ -6,6 +6,7 @@ import type { CardId } from '../../model/types'
 import { useBoardSelector } from '../../store/hooks'
 import { AddColumnForm } from '../AddColumnForm/AddColumnForm'
 import { CardDetailsDialog } from '../CardDetailsDialog/CardDetailsDialog'
+import { FilterBar } from '../FilterBar/FilterBar'
 import { ColumnItem } from '../Column/ColumnItem'
 import styles from './Board.module.css'
 
@@ -21,19 +22,22 @@ export function Board() {
   })
 
   return (
-    <div className={styles.board}>
-      {columnOrder.length === 0 && (
-        <p className={styles.empty}>This board has no columns yet. Add one to get started.</p>
-      )}
-      <ol ref={containerRef} className={styles.columns} aria-label="Columns">
-        {columnOrder.map((columnId) => (
-          <ColumnItem key={columnId} columnId={columnId} onOpenCard={setOpenCardId} />
-        ))}
-        <li className={styles.addColumnSlot}>
-          <AddColumnForm />
-        </li>
-      </ol>
-      <CardDetailsDialog cardId={openCardId} onClose={closeCard} />
+    <div className={styles.layout}>
+      <FilterBar />
+      <div className={styles.board}>
+        {columnOrder.length === 0 && (
+          <p className={styles.empty}>This board has no columns yet. Add one to get started.</p>
+        )}
+        <ol ref={containerRef} className={styles.columns} aria-label="Columns">
+          {columnOrder.map((columnId) => (
+            <ColumnItem key={columnId} columnId={columnId} onOpenCard={setOpenCardId} />
+          ))}
+          <li className={styles.addColumnSlot}>
+            <AddColumnForm />
+          </li>
+        </ol>
+        <CardDetailsDialog cardId={openCardId} onClose={closeCard} />
+      </div>
     </div>
   )
 }
